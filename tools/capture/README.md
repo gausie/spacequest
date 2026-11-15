@@ -14,17 +14,19 @@ keyboard aren't touched.
 - Docker (Colima is fine). The image builds ScummVM `v2026.4.0` from source with only the AGI
   and SCI engines, so the first build takes a few minutes.
 - `ffmpeg` on the host, for `process.sh`.
-- The game data under `games/` (gitignored), at the paths in `scenes.json`:
+- The game data in `games/<version-id>/` (gitignored), one folder per version holding just the
+  files ScummVM reads; the three PC AGI versions share `games/agi-pc`. Notes on where each came
+  from:
 
-  | Version | Path |
+  | Version | Source |
   | --- | --- |
-  | AGI PC (EGA, CGA, Hercules) | `games/agi-pc` |
-  | AGI Atari ST | `games/agi-atari-st/data` (recovered from a packed release with `st-unpack`, kept in `work/old-tools/`) |
-  | AGI Amiga | `games/agi-amiga/SpaceQuest/Data` |
-  | AGI Mac II / Mac B&W | `games/agi-mac/color`, `games/agi-mac/bw` |
-  | AGI Apple IIgs | `games/agi-apple2gs/data` |
-  | SCI PC EGA / VGA | `games/sci-pc-ega`, `games/sci-pc-vga/SQ1VGA` |
-  | SCI Mac | `games/sci-mac/data` |
+  | AGI Atari ST | recovered from a packed release with `st-unpack` (kept in `work/old-tools/`) |
+  | AGI Mac II / Mac B&W | the same files from one HFS image; colour adds `Palette.bin` |
+  | SCI Amiga | SPS IPF floppy images, converted to ADF with `disk-analyse` (built with capsimg) and unpacked with `amitools` |
+
+  Downloads, disk images and installer leftovers live in `work/originals/` (gitignored).
+- Output goes to `work/cap/docker/` (gitignored): `raw/` straight from ScummVM, `final/` after
+  postprocessing; `process.sh` then writes `shots/`.
 
 ## scenes.json
 
@@ -65,7 +67,8 @@ object to the Blues Brothers (view 73, loop 1) at the spot logic 70 uses for it.
 ## How a scene is captured
 
 ScummVM is built with its text console, so capture.py drives the debugger over a pty and
-reads its answers (the Dockerfile also patches a crash in the AGI `runopcode` command).
+reads its answers (the Dockerfile also patches a crash in the AGI `runopcode` command, and adds
+the B&W Mac render mode below).
 
 1. Start ScummVM fresh, get past the intro, `room N`, run the scene's setup commands, wait.
 2. Pause in the debugger and apply the recorded state to every object, freezing it:
@@ -86,3 +89,15 @@ reads its answers (the Dockerfile also patches a crash in the AGI `runopcode` co
 
 Scenes without a `state` fall back to a timed screenshot (`wait`), with `align` picking the
 frame closest to the reference version.
+
+## Black-and-white Mac
+
+ScummVM's AGI engine has no B&W Mac mode, so `agi-mac-bw.patch` adds `macintoshbw`. It copies
+what the B&W interpreter's 68k code does: each colour is an 8x8 pattern from its `PAT#` 1001
+resource, dithered into a 640x336 bitmap (4x2 pixels per AGI pixel). Pictures tile the
+patterns by screen position; cels take the pattern row from the rows left to draw and restart
+the column with every RLE run. ScummVM shows that bitmap at 640x400. The real interpreter then
+copied it to the 512x342 screen without the last column of each AGI pixel (480x336), so
+`postprocess.py` does the same (`keep_columns: [3, 4]`) and centres it on a `canvas` of
+512x342. Text isn't reproduced (the Mac drew it in its own windows with its own fonts), but the
+crop removes it anyway.

@@ -78,7 +78,7 @@
   "agi-atari-st": {
    "engine": "agi",
    "game": "sq1",
-   "path": "agi-atari-st/data",
+   "path": "agi-atari-st",
    "native": [
     320,
     200
@@ -101,7 +101,7 @@
   "agi-amiga": {
    "engine": "agi",
    "game": "sq1",
-   "path": "agi-amiga/SpaceQuest/Data",
+   "path": "agi-amiga",
    "native": [
     320,
     200
@@ -124,7 +124,7 @@
   "agi-mac": {
    "engine": "agi",
    "game": "sq1",
-   "path": "agi-mac/color",
+   "path": "agi-mac",
    "native": [
     320,
     200
@@ -147,7 +147,7 @@
   "agi-mac-bw": {
    "engine": "agi",
    "game": "sq1",
-   "path": "agi-mac/bw",
+   "path": "agi-mac-bw",
    "native": [
     640,
     400
@@ -184,7 +184,7 @@
   "agi-apple2gs": {
    "engine": "agi",
    "game": "sq1",
-   "path": "agi-apple2gs/data",
+   "path": "agi-apple2gs",
    "native": [
     320,
     200
@@ -227,7 +227,7 @@
   "sci-pc-vga": {
    "engine": "sci",
    "game": "sq1sci",
-   "path": "sci-pc-vga/SQ1VGA",
+   "path": "sci-pc-vga",
    "native": [
     320,
     200
@@ -247,7 +247,7 @@
   "sci-mac": {
    "engine": "sci",
    "game": "sq1sci",
-   "path": "sci-mac/data",
+   "path": "sci-mac",
    "native": [
     320,
     200
@@ -297,6 +297,21 @@
  },
  "scenes": {
   "agi": {
+   "title": {
+    "room": 67,
+    "wait": 8,
+    "after_room": [],
+    "state": {
+     "2": [
+      201,
+      1,
+      0,
+      23,
+      145,
+      15
+     ]
+    }
+   },
    "closet": {
     "room": 2,
     "wait": 4,
@@ -493,44 +508,49 @@
     }
    },
    "keronian": {
-    "room": 31,
-    "wait": 13,
-    "confirmed": true,
+    "room": 29,
+    "wait": 7,
+    "keys": [
+     [
+      0.3,
+      "Return"
+     ],
+     [
+      0.6,
+      "Return"
+     ],
+     [
+      5,
+      "Return"
+     ]
+    ],
     "state": {
      "0": [
       1,
       3,
-      5,
-      73,
-      165,
-      14
-     ],
-     "1": [
-      76,
-      0,
-      2,
-      50,
-      80,
+      4,
+      75,
+      155,
       13
      ],
-     "3": [
-      74,
+     "2": [
+      61,
       0,
       0,
-      80,
-      118,
-      11
+      68,
+      81,
+      5
      ],
-     "6": [
-      78,
+     "3": [
+      62,
       0,
-      3,
-      28,
-      112,
-      12
+      1,
+      58,
+      46,
+      5
      ]
     },
-    "stage_at": 2
+    "after_room": []
    },
    "bar": {
     "room": 70,
@@ -850,6 +870,48 @@
    }
   },
   "sci": {
+   "title": {
+    "room": null,
+    "wait": 4,
+    "setup": [
+     "send ?open1 changeState 2"
+    ],
+    "after_room": [],
+    "state": {
+     "neon3#0": [
+      600,
+      4,
+      0,
+      296,
+      24,
+      0
+     ],
+     "neon1#0": [
+      600,
+      2,
+      0,
+      25,
+      70,
+      0
+     ],
+     "neon2#0": [
+      600,
+      3,
+      0,
+      104,
+      145,
+      0
+     ],
+     "sign1#0": [
+      600,
+      0,
+      2,
+      223,
+      165,
+      0
+     ]
+    }
+   },
    "closet": {
     "room": 1,
     "wait": 10,
@@ -860,14 +922,6 @@
       3,
       40,
       46,
-      0
-     ],
-     "panicDroid#0": [
-      414,
-      0,
-      6,
-      247,
-      73,
       0
      ],
      "closetDoor#0": [
@@ -1523,10 +1577,41 @@
     "after_room": []
    },
    "sarien-ship": {
-    "room": 54,
-    "wait": 2,
+    "room": 50,
+    "wait": 3.5,
+    "keys": [
+     [
+      3,
+      "Return"
+     ]
+    ],
     "after_room": [],
-    "state": {}
+    "state": {
+     "ego#0": [
+      0,
+      0,
+      0,
+      92,
+      60,
+      0
+     ],
+     "hatch#0": [
+      150,
+      1,
+      2,
+      94,
+      94,
+      0
+     ],
+     "ship#0": [
+      150,
+      0,
+      1,
+      117,
+      112,
+      0
+     ]
+    }
    },
    "ending": {
     "room": 68,

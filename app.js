@@ -1,4 +1,4 @@
-import { VERSIONS, SCENES } from "./data.js";
+import { VERSIONS, SCENES, frameCanvas } from "./data.js";
 import { setShot, isMissing } from "./shots.js";
 import { crtParams } from "./crtsettings.js";
 import { initLab, openLab } from "./lab.js";
@@ -21,13 +21,7 @@ const layers = ["A", "B"].map(k => {
 function drawCRT(layer) {
   const { img, canvas, renderer, v } = layer;
   if (!state.crt || !renderer || !img.complete || !img.naturalWidth) return;
-  // The capture is nearest-scaled, so shrinking it back to native size recovers the exact source pixels.
-  const [w, h] = v.native, tmp = document.createElement("canvas");
-  tmp.width = w; tmp.height = h;
-  const ctx = tmp.getContext("2d", { willReadFrequently: true });
-  ctx.imageSmoothingEnabled = false;
-  ctx.drawImage(img, 0, 0, w, h);
-  renderer.setSource({ w, h, data: new Uint8Array(ctx.getImageData(0, 0, w, h).data.buffer) });
+  renderer.setSource(frameCanvas(v, img));
   const r = canvas.getBoundingClientRect(), dpr = window.devicePixelRatio || 1;
   canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
   const { plan, params } = crtParams(v, canvas.height);

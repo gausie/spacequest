@@ -4,5 +4,5 @@ services:
     volumes:
       - ../../games:/games:ro
       - ../../tools/capture:/work
-      - ../../games/cap/docker:/out
+      - ../../work/cap/docker:/out
     entrypoint: ["python3", "/work/capture.py"]

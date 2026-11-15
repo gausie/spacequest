@@ -1,9 +1,9 @@
-import { VERSIONS, shotPath } from "./data.js";
+import { VERSIONS, shotPath, shotSize } from "./data.js";
 
 const missing = new Set();
 const placeholders = new Map();
 
-// Stand-in until a capture exists: a native-res test card scaled to 1600x1200 like a real capture.
+// Stand-in until a capture exists: a native-res test card scaled to the shot size like a real capture.
 function placeholder(v, s) {
   const key = `${v.id}/${s.id}`;
   if (placeholders.has(key)) return placeholders.get(key);
@@ -17,8 +17,8 @@ function placeholder(v, s) {
   x.fillText(s.name, w / 2, h / 2 + h / 40);
   x.fillStyle = "#fff8"; x.font = `${Math.round(h / 24)}px monospace`;
   x.fillText(`no capture yet: ${shotPath(v.id, s.id)}`, w / 2, h / 2 + h / 7);
-  const big = document.createElement("canvas"); big.width = 1600; big.height = 1200;
-  const bx = big.getContext("2d"); bx.imageSmoothingEnabled = false; bx.drawImage(c, 0, 0, 1600, 1200);
+  const [bw, bh] = shotSize(v), big = document.createElement("canvas"); big.width = bw; big.height = bh;
+  const bx = big.getContext("2d"); bx.imageSmoothingEnabled = false; bx.drawImage(c, 0, 0, bw, bh);
   const url = big.toDataURL();
   placeholders.set(key, url);
   return url;

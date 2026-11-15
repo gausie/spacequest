@@ -1,4 +1,9 @@
 // native: the game's real output size; the CRT works on that, not the 1600x1200 capture.
+// frame: the 4:3 area the picture sits in, where that isn't the picture itself. Macs have square
+//   pixels, so their 320x200 is wider than 4:3: it's letterboxed in a 320x240 frame (a 640x480
+//   screen) instead of being stretched. The page adds the bars; the shot is just the picture.
+// scale: a whole-number scale for the shot instead of fitting the frame to 1600x1200, where that
+//   would be fractional and smear 1-bit dither patterns (the B&W Mac's 512 is 3.125x).
 // display: which monitor crt.js's plan() should model ('31khz' VGA, 'ega15', 'cga15', 'hercules', 'mac', '15khz-tv', 'tv').
 // approx: shown, but the capture is a stand-in; the text says why.
 // hidden: kept for when we find a copy, but left out of the site until then.
@@ -13,9 +18,9 @@ export const ALL_VERSIONS = [
     about: "Same pictures, the ST's own palette for the 16 EGA colours." },
   { id: "agi-amiga",    name: "Amiga",         engine: "AGI", year: 1987, native: [320, 200], display: "15khz-tv",
     about: "Amiga palette and better music." },
-  { id: "agi-mac-bw",   name: "Macintosh B&W", engine: "AGI", year: 1987, native: [320, 200], display: "mac", hidden: true,
-    about: "The original black-and-white Mac edition, colours turned into dither patterns." },
-  { id: "agi-mac",      name: "Macintosh II",  engine: "AGI", year: 1988, native: [320, 200], display: "mac",
+  { id: "agi-mac-bw",   name: "Macintosh B&W", engine: "AGI", year: 1987, native: [512, 342], frame: [512, 384], scale: 3, display: "mac",
+    about: "The original black-and-white Mac edition: each colour a dither pattern, at 3x2 Mac pixels per AGI pixel." },
+  { id: "agi-mac",      name: "Macintosh II",  engine: "AGI", year: 1988, native: [320, 200], frame: [320, 240], display: "mac",
     about: "The 16-colour edition for the Mac II, with its own palette." },
   { id: "agi-apple2gs", name: "Apple IIgs",    engine: "AGI", year: 1987, native: [320, 200], display: "tv",
     about: "Its own palette and sampled sound; often called the best AGI port." },
@@ -23,15 +28,34 @@ export const ALL_VERSIONS = [
     about: "The remake for 16-colour machines: VGA art dithered down." },
   { id: "sci-pc-vga",   name: "PC VGA",        engine: "SCI", year: 1991, native: [320, 200], display: "31khz",
     about: "The 1991 remake: 256 colours, point-and-click interface." },
-  { id: "sci-amiga",    name: "Amiga",         engine: "SCI", year: 1992, native: [320, 200], display: "15khz-tv", hidden: true,
+  { id: "sci-amiga",    name: "Amiga",         engine: "SCI", year: 1992, native: [320, 200], display: "15khz-tv",
     about: "The remake reduced to the Amiga's 32 colours." },
-  { id: "sci-mac",      name: "Macintosh",     engine: "SCI", year: 1992, native: [320, 200], display: "mac",
+  { id: "sci-mac",      name: "Macintosh",     engine: "SCI", year: 1992, native: [320, 200], frame: [320, 240], display: "mac",
     about: "The VGA remake on colour Macs." },
 ];
 
 export const VERSIONS = ALL_VERSIONS.filter(v => !v.hidden);
+export const frameOf = v => v.frame || v.native;
+// A shot is the frame scaled to 1600x1200, cropped to the picture: 1600x1000 for a Mac.
+export const shotSize = v => {
+  const [nw, nh] = v.native, [fw, fh] = frameOf(v);
+  if (v.scale) return [nw * v.scale, nh * v.scale];
+  return [1600 * nw / fw, 1200 * nh / fh];
+};
+// Draw a shot back at its native pixels, centred in its frame on black: what the CRT shades.
+export function frameCanvas(v, img) {
+  const [nw, nh] = v.native, [fw, fh] = frameOf(v), c = document.createElement("canvas");
+  c.width = fw; c.height = fh;
+  const x = c.getContext("2d", { willReadFrequently: true });
+  x.fillStyle = "#000"; x.fillRect(0, 0, fw, fh);
+  // The shot is nearest-scaled, so shrinking it back recovers the exact source pixels.
+  x.imageSmoothingEnabled = false;
+  x.drawImage(img, (fw - nw) / 2, (fh - nh) / 2, nw, nh);
+  return { w: fw, h: fh, data: new Uint8Array(x.getImageData(0, 0, fw, fh).data.buffer) };
+}
 
 export const SCENES = [
+  { id: "title",       name: "Title screen" },
   { id: "closet",      name: "Broom closet" },
   { id: "archive",     name: "Data archive" },
   { id: "pod-bay",     name: "Escape pod bay" },

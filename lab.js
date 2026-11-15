@@ -1,4 +1,4 @@
-import { VERSIONS, SCENES } from "./data.js";
+import { VERSIONS, SCENES, frameCanvas } from "./data.js";
 import { settings, save, reset, crtParams, HYLLIAN, TUBE, TUBE_CONTROLS, MONITORS } from "./crtsettings.js";
 import { loadShot } from "./shots.js";
 
@@ -57,12 +57,7 @@ function renderMachine() {
 function loadSource() {
   const v = VERSIONS[lab.v], s = SCENES[lab.scene];
   loadShot(v, s, img => {
-    const [w, h] = v.native, c = document.createElement("canvas");
-    c.width = w; c.height = h;
-    const x = c.getContext("2d", { willReadFrequently: true });
-    x.imageSmoothingEnabled = false;
-    x.drawImage(img, 0, 0, w, h);
-    source = { w, h, data: new Uint8Array(x.getImageData(0, 0, w, h).data.buffer) };
+    source = frameCanvas(v, img);
     renderer.setSource(source);
     renderPanel();
     draw();

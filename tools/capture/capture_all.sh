@@ -9,7 +9,7 @@
 set -eu
 HERE=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$HERE/../.." && pwd)
-OUT="$ROOT/games/cap/docker"
+OUT="$ROOT/work/cap/docker"
 cd "$HERE"
 
 docker compose build

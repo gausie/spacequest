@@ -1,3 +1,4 @@
+import { frameOf } from "./data.js";
 // CRT tweaks shared by the viewer and the lab. Overrides are per preset because the
 // presets differ by monitor and size; the tube (curvature, corners, vignette) is global.
 const KEY = "sq-crt";
@@ -74,7 +75,8 @@ export function reset() { settings.overrides = {}; settings.tube = {}; settings.
 // fills the height it's given, with scanlines antialiased from 2 pixels per line (exact = 2).
 export function crtParams(v, height, exact = 2) {
   const display = settings.monitor[v.id] || v.display;
-  const p = CRT.plan(display, v.native[1], height, exact, display === "31khz" ? VGA_PRESET : undefined);
+  // Lines over the whole frame: a letterboxed picture's bars are part of the scan too.
+  const p = CRT.plan(display, frameOf(v)[1], height, exact, display === "31khz" ? VGA_PRESET : undefined);
   // Lines 2 pixels tall make bands on a curved tube, so then the picture isn't bent.
   const straight = p.straight ? { warpX: 0, warpY: 0 } : null;
   return { plan: p, display, params: { ...p.preset, ...TUBE, ...settings.overrides[p.name], ...settings.tube, ...straight } };

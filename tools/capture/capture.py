@@ -383,6 +383,12 @@ def apply_state(g, state):
         # Stop the room's own script too (global 2 is curRoom), or a cutscene carries on.
         room = re.search(r"== ([0-9a-f]{4}:[0-9a-f]{4})", g.console("vv g 2")[0]).group(1)
         out = g.console(f"send {room} setScript 0", *sci_apply(state, sci_objects(g)))
+        # Roger's head only shows while his view is his StopWalk cycler's vStopped, and that
+        # follows his outfit: arriving in the suit (61) and being posed in uniform (60) hides it.
+        if "ego#0" in state:
+            cyc = re.findall(r"returned: ([0-9a-f]{4}:[0-9a-f]{4})", g.console("send ego cycler")[0])
+            if cyc and cyc[0] != "0000:0000":
+                out += g.console(f"send {cyc[0]} vStopped {state['ego#0'][0]}")
     bad = [o for o in out if "Unknown opcode" in o or "wants" in o]
     if bad: raise RuntimeError(f"debugger refused: {bad[0].strip()}")
 
@@ -470,6 +476,11 @@ def capture_scene(version, scene, room, waits, dest_dir, label=None, debug=(), a
         # room None = a moment during start-up (the title), captured before the usual boot keys.
         if room is None:
             g.proc_start = time.time()
+            if setup:
+                # Start-up scenes (the intro) get their commands once the intro's script
+                # exists, e.g. to skip ahead to the title whatever the load time.
+                time.sleep(2)
+                g.console(*setup, may_resume=True); g.resume()
         else:
             g.boot()
             g.room(room, debug, setup)
