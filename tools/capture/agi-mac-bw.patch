@@ -1,0 +1,234 @@
+diff --git a/engines/agi/agi.cpp b/engines/agi/agi.cpp
+index 95d4ad40..df4a39ad 100644
+--- a/engines/agi/agi.cpp
++++ b/engines/agi/agi.cpp
+@@ -395,6 +395,7 @@ void AgiBase::initRenderMode() {
+ 	case Common::kRenderApple2GS:
+ 	case Common::kRenderAtariST:
+ 	case Common::kRenderMacintosh:
++	case Common::kRenderMacintoshBW:
+ 		_renderMode = configRenderMode;
+ 		break;
+ 	default:
+diff --git a/engines/agi/graphics.cpp b/engines/agi/graphics.cpp
+index 1bb1d202..ac43a89d 100644
+--- a/engines/agi/graphics.cpp
++++ b/engines/agi/graphics.cpp
+@@ -127,6 +127,10 @@ void GfxMgr::initVideo() {
+ 	case Common::kRenderAtariST:
+ 		initPalette(_paletteGfxMode, PALETTE_ATARI_ST, 16, 3);
+ 		break;
++	case Common::kRenderMacintoshBW:
++		initPalette(_paletteGfxMode, PALETTE_MACINTOSH_BW, 2, 8);
++		forceHires = true;
++		break;
+ 	case Common::kRenderMacintosh:
+ 		switch (_vm->getGameID()) {
+ 		case GID_KQ3:
+@@ -187,6 +191,7 @@ void GfxMgr::initVideo() {
+ 		initMouseCursor(&_mouseCursorBusy, MOUSECURSOR_SCI_BUSY, 15, 16, 7, 8);
+ 		break;
+ 	case Common::kRenderMacintosh:
++	case Common::kRenderMacintoshBW:
+ 		// It looks like Atari ST + Macintosh used the same standard mouse cursor
+ 		// TODO: Verify by checking actual hardware
+ 		initMouseCursor(&_mouseCursor, MOUSECURSOR_ATARI_ST, 11, 16, 0, 0);
+@@ -502,6 +507,9 @@ void GfxMgr::putFontPixelOnDisplay(int16 baseX, int16 baseY, int16 addX, int16 a
+ byte GfxMgr::getColor(int16 x, int16 y) const {
+ 	int offset = y * SCRIPT_WIDTH + x;
+ 
++	// Macintosh B&W keeps cel pattern phase in the upper bits, see SpritesMgr::drawCel()
++	if (_vm->_renderMode == Common::kRenderMacintoshBW)
++		return _gameScreen[offset] & 0x0F;
+ 	return _gameScreen[offset];
+ }
+ 
+@@ -562,6 +570,9 @@ void GfxMgr::render_Block(int16 x, int16 y, int16 width, int16 height, bool copy
+ 	case Common::kRenderHercA:
+ 		render_BlockHercules(x, y, width, height);
+ 		break;
++	case Common::kRenderMacintoshBW:
++		render_BlockMacintoshBW(x, y, width, height);
++		break;
+ 	case Common::kRenderCGA:
+ 		render_BlockCGA(x, y, width, height);
+ 		break;
+@@ -800,6 +811,62 @@ void GfxMgr::render_BlockHercules(int16 x, int16 y, int16 width, int16 height) {
+ }
+ 
+ // Table used for at least Manhunter 2, it renders 2 lines -> 3 lines instead of 4
++// PAT# 1001 "StdPats1" from the black and white Macintosh interpreter: one 8x8 QuickDraw
++// pattern per AGI colour, a set bit is black. The interpreter dithers the picture into a
++// 640x336 off-screen bitmap, 4x2 pixels per AGI pixel, tiling the patterns in that bitmap,
++// and copies it to the 512x342 screen leaving out the last column of every AGI pixel
++// (480x336). This draws that bitmap; the column drop needs a 480 wide display, so it is
++// left to whoever scales the screenshot.
++static const uint8 macintoshBWPatterns[16 * 8] = {
++	0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE, 0xEE,
++	0x66, 0xEE, 0xEE, 0xEE, 0xAA, 0xEE, 0xEE, 0xEE,
++	0x6E, 0xCE, 0xEA, 0xAE, 0xEC, 0xE6, 0xAE, 0xEA,
++	0xAA, 0xEE, 0xAA, 0xEE, 0xAA, 0xEE, 0xAA, 0xEE,
++	0xAA, 0x66, 0xAA, 0x66, 0xAA, 0x66, 0xAA, 0x66,
++	0x66, 0xEE, 0x66, 0xEE, 0x66, 0xEE, 0x66, 0xEE,
++	0xCC, 0xAA, 0xCC, 0x66, 0xCC, 0x66, 0xAA, 0x66,
++	0xAA, 0x44, 0xAA, 0x44, 0xAA, 0x44, 0xAA, 0x44,
++	0xAA, 0xEE, 0x66, 0xEE, 0xAA, 0xEE, 0x66, 0xEE,
++	0x44, 0x00, 0x88, 0x00, 0x44, 0x00, 0x88, 0x00,
++	0x80, 0x20, 0x04, 0x40, 0x02, 0x08, 0x40, 0x04,
++	0xA4, 0x4A, 0xA4, 0x4A, 0xA4, 0x4A, 0xA4, 0x4A,
++	0xA4, 0x00, 0x4A, 0x00, 0xA4, 0x00, 0x4A, 0x00,
++	0x88, 0x44, 0x22, 0x88, 0x44, 0x22, 0x88, 0x44,
++	0x88, 0x00, 0x00, 0x00, 0x44, 0x00, 0x00, 0x00,
++	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00
++};
++
++void GfxMgr::render_BlockMacintoshBW(int16 x, int16 y, int16 width, int16 height) {
++	assert(_upscaledHires == DISPLAY_UPSCALED_640x400);
++
++	for (int16 row = y; row < y + height; row++) {
++		uint32 offsetVisual = SCRIPT_WIDTH * row + x;
++		uint32 offsetDisplay = getDisplayOffsetToGameScreenPos(x, row);
++
++		for (int16 column = x; column < x + width; column++) {
++			byte value = _activeScreen[offsetVisual++];
++			const uint8 *pattern = &macintoshBWPatterns[(value & 0x0F) * 8];
++			uint16 rowPair = row & 3;
++			bool lowNibble = column & 1;
++
++			if (value & 0x80) {
++				// Cels have their own pattern phase, see SpritesMgr::drawCel()
++				rowPair = (value >> 4) & 3;
++				lowNibble = value & 0x40;
++			}
++
++			for (int16 line = 0; line < 2; line++) {
++				byte bits = pattern[rowPair * 2 + line];
++				bits = lowNibble ? (bits & 0x0F) : (bits >> 4);
++				byte *dest = &_displayScreen[offsetDisplay + line * _displayScreenWidth];
++				for (int16 bit = 0; bit < 4; bit++)
++					dest[bit] = (bits & (0x08 >> bit)) ? 0 : 1;
++			}
++			offsetDisplay += 4;
++		}
++	}
++}
++
+ // Manhunter 1 is shipped with a broken Hercules font
+ // King's Quest 4 aborts right at the start, when Hercules rendering is active
+ #if 0
+@@ -1053,6 +1120,7 @@ void GfxMgr::drawBox(int16 x, int16 y, int16 width, int16 height, byte backgroun
+ 		drawDisplayRect(x, +2, y, +2, 0, 1, height, -4, lineColor);
+ 		break;
+ 	case Common::kRenderMacintosh:
++	case Common::kRenderMacintoshBW:
+ 		// 1 pixel between box and frame lines. Frame lines were black
+ 		drawDisplayRect(x, +1, y, +1, width, -2, 0, 1, 0);
+ 		drawDisplayRect(x + width, -2, y, +1, 0, 1, height, -2, 0);
+@@ -1086,8 +1154,9 @@ void GfxMgr::drawDisplayRect(int16 x, int16 y, int16 width, int16 height, byte c
+ 		break;
+ 	case Common::kRenderHercG:
+ 	case Common::kRenderHercA:
++	case Common::kRenderMacintoshBW:
+ 		if (color)
+-			color = 1; // change any color except black to green/amber
++			color = 1; // change any color except black to green/amber/white
+ 		// fall through
+ 	case Common::kRenderEGA:
+ 	default:
+diff --git a/engines/agi/graphics.h b/engines/agi/graphics.h
+index 320019fa..b9b22806 100644
+--- a/engines/agi/graphics.h
++++ b/engines/agi/graphics.h
+@@ -179,6 +179,7 @@ private:
+ 	void render_BlockEGA(int16 x, int16 y, int16 width, int16 height);
+ 	void render_BlockCGA(int16 x, int16 y, int16 width, int16 height);
+ 	void render_BlockHercules(int16 x, int16 y, int16 width, int16 height);
++	void render_BlockMacintoshBW(int16 x, int16 y, int16 width, int16 height);
+ 
+ public:
+ 	void transition_Amiga();
+diff --git a/engines/agi/palette.h b/engines/agi/palette.h
+index 271f60dc..c9298bbb 100644
+--- a/engines/agi/palette.h
++++ b/engines/agi/palette.h
+@@ -74,6 +74,14 @@ static const uint8 PALETTE_HERCULES_AMBER[2 * 3] = {
+ 	0xdc, 0xb4, 0x00  // amber
+ };
+ 
++/**
++ * 2 color Macintosh black and white palette. Using 8-bit RGB values.
++ */
++static const uint8 PALETTE_MACINTOSH_BW[2 * 3] = {
++	0x00, 0x00, 0x00, // black
++	0xff, 0xff, 0xff  // white
++};
++
+ /**
+  * Atari ST AGI palette.
+  * Used by all of the tested Atari ST AGI games
+diff --git a/engines/agi/sprite.cpp b/engines/agi/sprite.cpp
+index 69770ead..e6ce87eb 100644
+--- a/engines/agi/sprite.cpp
++++ b/engines/agi/sprite.cpp
+@@ -222,6 +222,29 @@ void SpritesMgr::drawAllSpriteLists() {
+ 	drawSprites(_spriteRegularList);
+ }
+ 
++// The black and white Macintosh interpreter dithers a cel while drawing it, and unlike the
++// picture its pattern isn't tied to the screen: the pattern row pair is the number of cel
++// rows left to draw (counting down to 1 at the bottom), and the pattern column restarts
++// with every RLE run of the view data. Runs are at most 15 pixels, split from the left
++// (true of every SQ1 view), and mirroring reverses their order. render_BlockMacintoshBW()
++// reads this from the upper bits of the visual screen; bit 7 marks a cel pixel.
++static byte macintoshBWCelPhase(const byte *row, int16 width, int16 x, bool mirrored, uint8 rowsLeft) {
++	int16 start = x, end = x;
++	while (start > 0 && row[start - 1] == row[x])
++		start--;
++	while (end < width - 1 && row[end + 1] == row[x])
++		end++;
++
++	int16 place = (x - start) % 15;
++	if (mirrored) {
++		int16 fromRight = end - x;
++		int16 chunk = fromRight / 15;
++		int16 chunkLen = MIN<int16>(15, end - start + 1 - chunk * 15);
++		place = chunk * 15 + chunkLen - 1 - fromRight;
++	}
++	return 0x80 | ((place & 1) << 6) | ((rowsLeft & 3) << 4);
++}
++
+ void SpritesMgr::drawCel(ScreenObjEntry *screenObj) {
+ 	int16 curX = screenObj->xPos;
+ 	int16 baseX = screenObj->xPos;
+@@ -235,15 +258,19 @@ void SpritesMgr::drawCel(ScreenObjEntry *screenObj) {
+ 	byte screenPriority = 0;
+ 	byte curColor = 0;
+ 	byte isViewHidden = true;
++	const bool macintoshBW = _vm->_renderMode == Common::kRenderMacintoshBW;
+ 
+ 	// Adjust vertical position, given yPos is lower left, but we need upper left
+ 	curY = curY - celPtr->height + 1;
+ 
+ 	while (remainingCelHeight) {
++		const byte *celRowPtr = celDataPtr;
+ 		for (int16 loopX = 0; loopX < celWidth; loopX++) {
+ 			curColor = *celDataPtr++;
+ 
+ 			if (curColor != celClearKey) {
++				if (macintoshBW)
++					curColor |= macintoshBWCelPhase(celRowPtr, celWidth, loopX, celPtr->mirrored, remainingCelHeight);
+ 				screenPriority = _gfx->getPriority(curX, curY);
+ 				if (screenPriority <= 2) {
+ 					// control data found
+diff --git a/engines/agi/text.cpp b/engines/agi/text.cpp
+index cc02816b..ed5f4123 100644
+--- a/engines/agi/text.cpp
++++ b/engines/agi/text.cpp
+@@ -187,6 +187,7 @@ void TextMgr::charAttrib_Set(byte foreground, byte background) {
+ 			break;
+ 		case Common::kRenderHercA:
+ 		case Common::kRenderHercG:
++		case Common::kRenderMacintoshBW:
+ 			if (background) {
+ 				_textAttrib.combinedForeground = 0;
+ 				_textAttrib.combinedBackground = 1;

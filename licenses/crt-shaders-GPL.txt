@@ -1,0 +1,35 @@
+crt.js: the CRT monitors of DOSBox Staging, for still pictures, in WebGL2
+
+A port of the shaders behind DOSBox Staging's adaptive CRT settings (crt-auto, crt-auto-machine and crt-auto-arcade),
+from its resources/glshaders/crt folder, version 0.82. https://www.dosbox-staging.org/
+Ported to WebGL2 and changed for this site by The Paninos off-line, October and November 2026.
+
+What it contains:
+
+1. crt-hyllian with DOSBox Staging's presets.
+   Copyright (C) 2020-2024 The DOSBox Staging Team
+   Copyright (C) 2011-2020 Hyllian - sergiogdb@gmail.com
+   Copyright (C) 2020, this file ported from Libretro's GLSL shader crt-hyllian.glslp to DOSBox-compatible format
+   by Tyrells.
+   MIT licence: the full notice is in crt-hyllian-MIT.txt, next to this file, and at the top of crt.js.
+   Its mask functions are by hunterk (public domain).
+
+2. 'vga-1080p' and 'vga-1080p-fake-double-scan'.
+   Copyright (C) 2020-2024 The DOSBox Staging Team
+   Based on parts of the Caligari shader plus bits and pieces from Hyllian, Easymode, and probably a few others.
+   GNU General Public License, version 2 or later.
+
+3. Curvature and rounded corners from crt-guest-advanced-hd (its pass2 and deconvergence-hd passes).
+   Copyright (C) 2018-2025 guest(r)
+   The vignette from its pre-shaders-afterglow pass.
+   Copyright (C) 2019-2025 guest(r) and Dr. Venom
+   GNU General Public License, version 2 or later.
+   https://github.com/libretro/slang-shaders/tree/master/crt/shaders/guest/hd
+
+As a whole, this program is free software; you can redistribute it and/or modify it under the terms of the GNU General
+Public License as published by the Free Software Foundation; either version 2 of the License, or (at your option) any
+later version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
+
+The licence text is in GPL-2.0.txt, next to this file.
+The source of the port is crt.js itself, served unminified at the root of the site.

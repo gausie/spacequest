@@ -1,0 +1,6 @@
+games/
+raw/
+.DS_Store
+work/
+__pycache__/
+core

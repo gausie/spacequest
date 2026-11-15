@@ -1,0 +1,88 @@
+# Capturing the screenshots
+
+Everything in `shots/` is produced by one command:
+
+    tools/capture/capture_all.sh            # every version
+    tools/capture/capture_all.sh sci-mac    # or just some
+
+It runs ScummVM headless in Docker, jumps to each scene's room with the debugger, grabs the
+window off a virtual X display and publishes the result to `shots/`. Your screen and
+keyboard aren't touched.
+
+## Prerequisites
+
+- Docker (Colima is fine). The image builds ScummVM `v2026.4.0` from source with only the AGI
+  and SCI engines, so the first build takes a few minutes.
+- `ffmpeg` on the host, for `process.sh`.
+- The game data under `games/` (gitignored), at the paths in `scenes.json`:
+
+  | Version | Path |
+  | --- | --- |
+  | AGI PC (EGA, CGA, Hercules) | `games/agi-pc` |
+  | AGI Atari ST | `games/agi-atari-st/data` (recovered from a packed release with `st-unpack`, kept in `work/old-tools/`) |
+  | AGI Amiga | `games/agi-amiga/SpaceQuest/Data` |
+  | AGI Mac II / Mac B&W | `games/agi-mac/color`, `games/agi-mac/bw` |
+  | AGI Apple IIgs | `games/agi-apple2gs/data` |
+  | SCI PC EGA / VGA | `games/sci-pc-ega`, `games/sci-pc-vga/SQ1VGA` |
+  | SCI Mac | `games/sci-mac/data` |
+
+## scenes.json
+
+- `versions`: how to start each version (game id, data path, render mode, native size, keys
+  to get past the intro, debugger commands to run after the room change, cursor handling).
+- `scenes`: per engine, the room for each scene and its `state`: every on-screen object's
+  view, loop, cel and position at the chosen moment. Optional per scene:
+  - `wait`: seconds after entering the room at which the state was recorded, and at which it
+    is applied (`stage_at` overrides the latter, e.g. to apply it before a message opens);
+  - `debug` (before the room change) and `setup` (after it; `{room}` is the SCI room
+    object) debugger commands, e.g. `setflag 101 1` or `vv g 178 2` start the spider droid;
+  - `dismiss` (SCI): close message boxes as they appear;
+  - `ignore`: objects the room moves every frame (set, but not checked);
+  - `cels`: per version, a different cel for an object where the versions number their frames
+    differently (the EGA SCI Orat's closed mouth is cel 4, VGA's is cel 3).
+- `reference`: the version each engine's states are recorded from.
+
+Rooms were all confirmed by looking at the frames, using:
+
+    docker compose run --rm capture survey <version> 1-110       # one frame per room
+    docker compose run --rm capture burst <version> <room> 8 1   # frames over time
+
+and states are (re)recorded from the reference version with:
+
+    docker compose run --rm capture record agi [scene ...]
+    docker compose run --rm capture record sci [scene ...]
+
+A recorded state is plain data: SCI Roger was then placed by hand to match the AGI shot
+(same facing, equivalent spot). `record sci --merge` keeps those edits and only adds objects
+the stored state doesn't have yet.
+
+Anything the game picks at random has to be pinned before the room is entered, or versions
+end up showing different things: the SCI bar's band is global 170, but entering Ulence Flats
+resets it, so that scene starts in the slot machine room (44), sets it, then goes to the bar.
+The AGI bar rolls its band (v43) as the room loads, so there the state simply sets the band
+object to the Blues Brothers (view 73, loop 1) at the spot logic 70 uses for it.
+
+## How a scene is captured
+
+ScummVM is built with its text console, so capture.py drives the debugger over a pty and
+reads its answers (the Dockerfile also patches a crash in the AGI `runopcode` command).
+
+1. Start ScummVM fresh, get past the intro, `room N`, run the scene's setup commands, wait.
+2. Pause in the debugger and apply the recorded state to every object, freezing it:
+   AGI `runopcode` (`stop.motion`, `stop.cycling`, `set.loop`, `fix.loop`, `set.cel`,
+   `reposition.to`, erase/draw); SCI `send` (no motion, cycler or script, then view, loop,
+   cel, x, y, z; the room's own script is stopped too, and Roger's head stops looking around).
+3. Let the game draw one moment, pause again and read the state back. Only if it matches is
+   the window grabbed (while paused), otherwise it tries again. So every version shows exactly
+   the same moment, drawn from its own data.
+4. The OpenGL backend scales the game by an exact integer (pixel-perfect), so `normalize()`
+   crops and samples it back to native resolution, and refuses the frame if any scaled block
+   isn't one colour (a cursor or overlay).
+5. Cursors: the pointer is parked outside the window. SCI games keep their own cursor on
+   screen, so two frames are taken with it in opposite corners and the corners swapped.
+6. `postprocess.py` trims the score bar and parser line (AGI) or the icon bar strip (SCI),
+   centres the playfield on a black native-size canvas, and `process.sh` scales it to
+   1600x1200.
+
+Scenes without a `state` fall back to a timed screenshot (`wait`), with `align` picking the
+frame closest to the reference version.

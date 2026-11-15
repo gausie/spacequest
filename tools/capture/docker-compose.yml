@@ -1,0 +1,8 @@
+services:
+  capture:
+    build: .
+    volumes:
+      - ../../games:/games:ro
+      - ../../tools/capture:/work
+      - ../../games/cap/docker:/out
+    entrypoint: ["python3", "/work/capture.py"]
