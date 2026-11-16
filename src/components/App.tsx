@@ -18,15 +18,15 @@ import { ZoomView } from "./ZoomView.tsx";
 
 // closeButton: something to read or look at, which clicks inside shouldn't close.
 interface Message {
-  wide?: boolean;
-  closeButton?: boolean;
+  holdsPicture?: boolean;
+  persistent?: boolean;
   content: ReactNode;
 }
 
 export function App() {
   const { view, set } = useView();
   const [agiFont, toggleAgiFont] = useAgiFont();
-  const [openMenu, setOpenMenu] = useState(-1);
+  const [openMenu, setOpenMenu] = useState<number | null>(null);
   const [message, setMessage] = useState<Message | null>(null);
   const parser = useRef<HTMLInputElement>(null);
 
@@ -36,7 +36,7 @@ export function App() {
 
   const zoomInto = (side: "a" | "b") => {
     const v = VERSIONS[side === "a" ? view.a : view.b];
-    setMessage({ wide: true, closeButton: true, content: <ZoomView version={v} scene={SCENES[view.scene]} /> });
+    setMessage({ holdsPicture: true, persistent: true, content: <ZoomView version={v} scene={SCENES[view.scene]} /> });
   };
   const say = (...lines: string[]) => setMessage({ content: lines.map((l) => <p key={l}>{l}</p>) });
   const closeMessage = () => {
@@ -44,14 +44,15 @@ export function App() {
     parser.current?.focus();
   };
 
-  // Menus, keys and the parser all go through these.
   const actions: Actions = {
     scene: set.scene,
     version: set.version,
-    compare: set.compare,
+    toggleCompare: set.toggleCompare,
+    compareWith: set.compareWith,
     swap: set.swap,
-    crt: () => (crtSupported ? set.crt() : say("This browser has no WebGL2, so no CRT.")),
+    toggleCrt: () => (crtSupported ? set.toggleCrt() : say("This browser has no WebGL2, so no CRT.")),
     zoom: set.zoom,
+    cycleZoom: set.cycleZoom,
     link: async () => {
       try {
         await navigator.clipboard.writeText(location.href);
@@ -61,9 +62,9 @@ export function App() {
       }
     },
     look: () => zoomInto("a"),
-    about: () => setMessage({ closeButton: true, content: <AboutText /> }),
-    help: () => setMessage({ closeButton: true, content: <HelpText /> }),
-    font: toggleAgiFont,
+    about: () => setMessage({ persistent: true, content: <AboutText /> }),
+    help: () => setMessage({ persistent: true, content: <HelpText /> }),
+    toggleAgiFont,
   };
 
   useGlobalKeys({
@@ -72,7 +73,7 @@ export function App() {
     actions,
     set,
     parser,
-    toggleMenu: () => setOpenMenu((open) => (open >= 0 ? -1 : 0)),
+    toggleMenu: () => setOpenMenu((open) => (open === null ? 0 : null)),
   });
 
   const menus: Menu[] = [
@@ -87,8 +88,8 @@ export function App() {
     {
       title: "Special",
       items: [
-        { label: "Compare", keys: "<F2>", check: view.compare, run: () => actions.compare() },
-        { label: "Swap A and B", keys: "<F3>", disabled: !view.compare, run: actions.swap },
+        { label: "Compare", keys: "<F2>", checked: view.comparing, run: actions.toggleCompare },
+        { label: "Swap A and B", keys: "<F3>", disabled: !view.comparing, run: actions.swap },
         "-",
         { label: "Copy link", keys: "<F9>", run: actions.link },
       ],
@@ -96,10 +97,10 @@ export function App() {
     {
       title: "Display",
       items: [
-        ...ZOOMS.map((z) => ({ label: `Zoom ${z}x`, radio: view.zoom === z, run: () => actions.zoom(z) })),
-        { label: "CRT", keys: "<F4>", check: view.crt, disabled: !crtSupported, run: actions.crt },
+        ...ZOOMS.map((z) => ({ label: `Zoom ${z}x`, selected: view.zoom === z, run: () => actions.zoom(z) })),
+        { label: "CRT", keys: "<F4>", checked: view.crt, disabled: !crtSupported, run: actions.toggleCrt },
         "-",
-        { label: "Use AGI font", check: agiFont, run: actions.font },
+        { label: "Use AGI font", checked: agiFont, run: actions.toggleAgiFont },
       ],
     },
   ];
@@ -108,13 +109,19 @@ export function App() {
     A = VERSIONS[view.a],
     B = VERSIONS[view.b];
   const name = (v: Version) => `${v.engine} ${v.name}`;
-  const right = view.compare
+  const versionText = view.comparing
     ? `${name(A)} │ ${name(B)}`
-    : `${name(A)}, ${A.year}, ${A.native.join("x")}${A.approx ? " *" : ""}`;
+    : `${name(A)}, ${A.year}, ${A.native.join("x")}${A.standInNote ? " *" : ""}`;
 
   return (
     <>
-      <StatusLine left={scene.name} right={right} menus={menus} openMenu={openMenu} setOpenMenu={setOpenMenu} />
+      <StatusLine
+        sceneName={scene.name}
+        versionText={versionText}
+        menus={menus}
+        openMenu={openMenu}
+        setOpenMenu={setOpenMenu}
+      />
       <main className={styles.desk}>
         <Viewer view={view} set={set} onZoom={zoomInto} />
       </main>
@@ -127,7 +134,7 @@ export function App() {
         }}
       />
       {message && (
-        <MessageBox wide={message.wide} closeButton={message.closeButton} onClose={closeMessage}>
+        <MessageBox holdsPicture={message.holdsPicture} persistent={message.persistent} onClose={closeMessage}>
           {message.content}
         </MessageBox>
       )}

@@ -1,7 +1,6 @@
 import { type Scene, shotPath, type Version } from "../data.ts";
 import styles from "./ZoomView.module.css";
 
-// The picture as large as the window allows, under its caption.
 export function ZoomView({ version, scene }: { version: Version; scene: Scene }) {
   return (
     <>

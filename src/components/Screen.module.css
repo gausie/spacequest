@@ -13,15 +13,14 @@
   overflow: hidden;
   cursor: var(--cur-point);
 }
-/* B shows right of the divider. */
-.right {
-  clip-path: inset(0 0 0 var(--split, 50%));
+.rightOfDivider {
+  clip-path: inset(0 0 0 var(--divider, 50%));
 }
-.handle {
+.divider {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: var(--split, 50%);
+  left: var(--divider, 50%);
   width: var(--u);
   background: var(--e15);
   transform: translateX(-50%);
@@ -31,7 +30,7 @@
   --w: calc(var(--ch) * 2 + var(--u) * 2);
   position: absolute;
   top: 50%;
-  left: clamp(0px, calc(var(--split, 50%) - var(--w) / 2), calc(100% - var(--w)));
+  left: clamp(0px, calc(var(--divider, 50%) - var(--w) / 2), calc(100% - var(--w)));
   width: var(--w);
   height: var(--F);
   transform: translateY(-50%);
@@ -42,14 +41,14 @@
   text-align: center;
 }
 /* While a version is dragged from the strip: the left half sets A, the right half B. */
-.drop {
+.dropTargets {
   position: absolute;
   inset: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
   pointer-events: none;
 }
-.drop span {
+.dropTargets span {
   display: grid;
   place-items: center;
   text-align: center;

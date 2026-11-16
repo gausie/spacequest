@@ -1,25 +1,25 @@
-// native: the game's real output size; the CRT works on that, not the 1600x1200 capture.
-// frame: the 4:3 area the picture sits in, where that isn't the picture itself. Macs have square
-//   pixels, so their 320x200 is wider than 4:3: it's letterboxed in a 320x240 frame (a 640x480
-//   screen) instead of being stretched. The page adds the bars; the shot is just the picture.
-// scale: a whole-number scale for the shot instead of fitting the frame to 1600x1200, where that
-//   would be fractional and smear 1-bit dither patterns (the B&W Mac's 512 is 3.125x).
-// display: which monitor crt.js's plan() should model ('31khz' VGA, 'ega15', 'cga15', 'hercules', 'mac', '15khz-tv', 'tv').
-// approx: shown, but the capture is a stand-in; the text says why.
-// hidden: kept for when we find a copy, but left out of the site until then.
 // Plain data with type annotations only: process.sh imports this file with Node directly.
 export type Size = [number, number];
+// The monitor the CRT models for a version.
 export type Display = "31khz" | "ega15" | "cga15" | "hercules" | "mac" | "15khz-tv" | "tv";
 export interface Version {
   id: string;
   name: string;
   engine: "AGI" | "SCI";
   year: number;
+  // The game's real output size; the CRT works on that, not the 1600x1200 capture.
   native: Size;
+  // The 4:3 area the picture sits in, where that isn't the picture itself. Macs have square
+  // pixels, so their 320x200 is wider than 4:3: it's letterboxed in a 320x240 frame (a 640x480
+  // screen) instead of being stretched. The page adds the bars; the shot is just the picture.
   frame?: Size;
+  // A whole-number scale for the shot instead of fitting the frame to 1600x1200, where that would
+  // be fractional and smear 1-bit dither patterns (the B&W Mac's 512 is 3.125x).
   scale?: number;
   display: Display;
-  approx?: string;
+  // Why the capture is only a stand-in, when it is.
+  standInNote?: string;
+  // Kept for when we find a copy, but left out of the site until then.
   hidden?: boolean;
 }
 export interface Scene {

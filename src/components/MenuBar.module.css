@@ -1,4 +1,3 @@
-/* Only shown while the status line is in menu mode (StatusLine passes `shown`). */
 .menubar {
   display: flex;
   align-items: center;

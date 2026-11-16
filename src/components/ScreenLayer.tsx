@@ -8,29 +8,28 @@ interface Props {
   version: Version;
   scene: Scene;
   crt: boolean;
-  // The screen's width in CSS pixels: the CRT is redrawn for its size.
-  width: number;
+  screenWidth: number;
   className?: string;
 }
 
 // One picture on the screen: the capture, and over it a canvas with the CRT version when it's on.
-export function ScreenLayer({ id, version, scene, crt, width, className = "" }: Props) {
+export function ScreenLayer({ id, version, scene, crt, screenWidth, className = "" }: Props) {
   const img = useRef<HTMLImageElement>(null),
     canvas = useRef<HTMLCanvasElement>(null);
   const drawCrt = useCrt(canvas);
-  const draw = useCallback(() => {
+  const drawCrtIfOn = useCallback(() => {
     if (crt && img.current) drawCrt(img.current, version);
   }, [crt, version, drawCrt]);
 
   // A new picture redraws on load; this covers CRT being switched on and resizes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: width and scene are what trigger a redraw
+  // biome-ignore lint/correctness/useExhaustiveDependencies: screenWidth and scene are what trigger a redraw
   useEffect(() => {
-    draw();
-  }, [draw, width, scene]);
+    drawCrtIfOn();
+  }, [drawCrtIfOn, screenWidth, scene]);
 
   return (
     <div className={[styles.layer, crt && styles.crt, className].filter(Boolean).join(" ")} id={id}>
-      <img ref={img} alt="" draggable={false} src={shotPath(version.id, scene.id)} onLoad={draw} />
+      <img ref={img} alt="" draggable={false} src={shotPath(version.id, scene.id)} onLoad={drawCrtIfOn} />
       <canvas ref={canvas} />
     </div>
   );

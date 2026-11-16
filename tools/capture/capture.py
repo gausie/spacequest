@@ -153,15 +153,14 @@ class Game:
         if after:
             # Debugger commands once the room has been set up, e.g. stopping Roger
             # (AGI v6 = ego direction) so he doesn't wander off at a version-dependent speed,
-            # or starting a scene's event. {room} is the SCI room object (global 2).
+            # or starting a scene's event.
             time.sleep(0.5)
             if any("{room}" in c for c in after):
-                room = re.search(r"== ([0-9a-f]{4}:[0-9a-f]{4})", self.console("vv g 2")[0]).group(1)
+                room = sci_room_object(self)
                 after = [c.replace("{room}", room) for c in after]
             self.console(*after, may_resume=True); self.resume()
 
-    def hide_cursor(self):
-        # Park the pointer outside the 800x600 game window so no cursor is drawn into the frame.
+    def park_pointer_outside_window(self):
         sh("xdotool", "mousemove", "1599", "1199"); time.sleep(0.2)
 
     def grab(self, dest):
@@ -172,7 +171,7 @@ class Game:
         # ScummVM shows a "Screenshot saved" message for a couple of seconds, and it lands
         # in the next screenshot. normalize() spots it (non-uniform blocks), so wait and retry.
         for attempt in range(tries):
-            self.hide_cursor()
+            self.park_pointer_outside_window()
             if not self.grab(dest): continue
             try:
                 normalize(dest, self.v["native"], strict=self.v.get("strict", True))
@@ -256,10 +255,10 @@ def game_rect(native, W=800, H=600):
     return (W - w * k) // 2, (H - h * k) // 2, k
 
 
-def cursor_free_shot(g, dest):
+def cursor_free_shot(game, dest):
     """SCI games draw their own cursor and keep it inside the picture, so take one frame
     with it parked bottom-left and one bottom-right, and patch each corner from the other."""
-    w, h = g.v["native"]
+    w, h = game.v["native"]
     ox, oy, k = game_rect((w, h))
     # Whole game pixels, so the cursor lands on the scaled grid.
     corners = [(ox, oy + (h - 1) * k), (ox + (w - 1) * k, oy + (h - 1) * k)]
@@ -267,14 +266,14 @@ def cursor_free_shot(g, dest):
     for i, (x, y) in enumerate(corners):
         # Approach the corner in steps: some interpreters (Mac SCI) only pick up real motion.
         for dx in (40, 20, 0):
-            sh("xdotool", "mousemove", "--window", g.win, str(x + (dx if i == 0 else -dx)), str(y - dx)); time.sleep(0.4)
+            sh("xdotool", "mousemove", "--window", game.win, str(x + (dx if i == 0 else -dx)), str(y - dx)); time.sleep(0.4)
         time.sleep(0.8)
         p = dest + f".{i}.png"
-        if not g.grab(p): return False
+        if not game.grab(p): return False
         # The corner holding the cursor gets replaced from the other frame, so don't check it.
         patch = 32
         corner = (0, h - patch, patch, patch) if i == 0 else (w - patch, h - patch, patch, patch)
-        try: normalize(p, g.v["native"], ignore=[corner], strict=g.v.get("strict", True))
+        try: normalize(p, game.v["native"], ignore=[corner], strict=game.v.get("strict", True))
         except RuntimeError as e:
             print(f"  corner {i}: {e}", flush=True); return False
         paths.append(p)
@@ -290,12 +289,24 @@ def cursor_free_shot(g, dest):
 
 # Rooms use more than the first 16 slots (the spider droid in room 19 is object 16).
 AGI_OBJECTS = 24
+CUR_ROOM_GLOBAL = 2
+# Where staging puts SCI actors a scene leaves out: below the picture (send can't take negatives).
+PARKED_Y = 1000
 
 
-def agi_state(g):
+def sci_room_object(game):
+    return re.search(r"== ([0-9a-f]{4}:[0-9a-f]{4})", game.console(f"vv g {CUR_ROOM_GLOBAL}")[0]).group(1)
+
+
+def sci_message_box_open(window_list):
+    # The picture's own port is always listed; anything more is a message box.
+    return len(re.findall(r"^\s*\d+:", window_list, re.M)) > 1
+
+
+def agi_state(game):
     """Every drawn screen object, read while the game is paused in the debugger."""
     state = {}
-    for i, text in enumerate(g.console(*[f"screenobj {i}" for i in range(AGI_OBJECTS)])):
+    for i, text in enumerate(game.console(*[f"screenobj {i}" for i in range(AGI_OBJECTS)])):
         text = text.replace("\r", "")
         m = re.search(r"view: (\d+), loop: (\d+), cel: (\d+)\nflags: (.*)\n", text)
         pos = re.search(r"\nxPos: (\d+), yPos: (\d+)", text)
@@ -305,7 +316,7 @@ def agi_state(g):
     return state
 
 
-def agi_apply(g, state, current):
+def agi_apply(game, state, current):
     """Set every screen object to the recorded [view, loop, cel, x, y, priority] and freeze it,
     so each version shows exactly the same moment. Same logic, same object numbers."""
     cmds = []
@@ -329,12 +340,12 @@ def agi_apply(g, state, current):
 AL = re.compile(r"^([0-9a-f]{4}:[0-9a-f]{4}) \((.*?)\), script (-?\d+), view (\d+) \((\d+), (\d+)\), pal \d+, at (-?\d+), (-?\d+),.*\(z: (-?\d+), prio: \d+, shown: (\d+)", re.M)
 
 
-def sci_objects(g):
+def sci_objects(game):
     """Animate list as {name#n: (address, [view, loop, cel, x, y, z], visible)}; heap addresses
     differ between versions, names (and their order) don't. ("shown" in the list only means
     redrawn this frame; visibility is the signal's Hidden bit.)"""
     objs, seen = {}, {}
-    al, room = g.console("animate_list", "vv g 11")
+    al, room = game.console("animate_list", "vv g 11")
     room = int(re.search(r"== [0-9a-f]{4}:([0-9a-f]{4})", room).group(1), 16)
     for m in AL.finditer(al.replace("\r", "")):
         addr, name, script = m.group(1), m.group(2), int(m.group(3))
@@ -347,11 +358,10 @@ def sci_objects(g):
     return objs
 
 
-def read_state(g):
-    if g.v["engine"] == "agi": return agi_state(g)
-    # y <= 0 puts the whole sprite above the picture (Roger parked at 0,0 in rooms he isn't in);
-    # y >= 1000 is where staging parks actors a scene leaves out (send can't take negatives).
-    return {k: v for k, (_, v, visible) in sci_objects(g).items() if visible and 0 < v[4] < 1000}
+def read_state(game):
+    if game.v["engine"] == "agi": return agi_state(game)
+    # y <= 0 puts the whole sprite above the picture (Roger parked at 0,0 in rooms he isn't in).
+    return {k: v for k, (_, v, visible) in sci_objects(game).items() if visible and 0 < v[4] < PARKED_Y}
 
 
 def sci_apply(state, objs):
@@ -361,7 +371,7 @@ def sci_apply(state, objs):
     for k, (a, _, visible) in objs.items():
         # Some actors are shown again every frame (Roger), so move them below the picture too.
         # Roger is parked even while hidden: a room can show him again once the game resumes.
-        if k not in state and (visible or k in ("ego#0", "egoHead#0")): cmds += [f"send {a} setScript 0", f"send {a} setCycle 0", f"send {a} hide", f"send {a} y 1000", f"send {a} startUpd"]
+        if k not in state and (visible or k in ("ego#0", "egoHead#0")): cmds += [f"send {a} setScript 0", f"send {a} setCycle 0", f"send {a} hide", f"send {a} y {PARKED_Y}", f"send {a} startUpd"]
     for k, (view, loop, cel, x, y, z) in state.items():
         if k not in objs: continue  # the version doesn't have it (staged_shot says so)
         a = objs[k][0]
@@ -379,75 +389,75 @@ def sci_apply(state, objs):
     return cmds
 
 
-def apply_state(g, state):
-    if g.v["engine"] == "agi":
-        out = g.console(*agi_apply(g, state, agi_state(g)))
+def apply_state(game, state):
+    if game.v["engine"] == "agi":
+        out = game.console(*agi_apply(game, state, agi_state(game)))
     else:
-        # Stop the room's own script too (global 2 is curRoom), or a cutscene carries on.
-        room = re.search(r"== ([0-9a-f]{4}:[0-9a-f]{4})", g.console("vv g 2")[0]).group(1)
-        out = g.console(f"send {room} setScript 0", *sci_apply(state, sci_objects(g)))
+        # Stop the room's own script too, or a cutscene carries on.
+        room = sci_room_object(game)
+        out = game.console(f"send {room} setScript 0", *sci_apply(state, sci_objects(game)))
         # Roger's head only shows while his view is his StopWalk cycler's vStopped, and that
         # follows his outfit: arriving in the suit (61) and being posed in uniform (60) hides it.
         if "ego#0" in state:
-            cyc = re.findall(r"returned: ([0-9a-f]{4}:[0-9a-f]{4})", g.console("send ego cycler")[0])
+            cyc = re.findall(r"returned: ([0-9a-f]{4}:[0-9a-f]{4})", game.console("send ego cycler")[0])
             if cyc and cyc[0] != "0000:0000":
-                out += g.console(f"send {cyc[0]} vStopped {state['ego#0'][0]}")
+                out += game.console(f"send {cyc[0]} vStopped {state['ego#0'][0]}")
     bad = [o for o in out if "Unknown opcode" in o or "wants" in o]
     if bad: raise RuntimeError(f"debugger refused: {bad[0].strip()}")
 
 
-def paused_grab(g, dest, ignore=()):
-    if not g.grab(dest): return False
+def paused_grab(game, dest, ignore=()):
+    if not game.grab(dest): return False
     try:
-        normalize(dest, g.v["native"], ignore=ignore, strict=g.v.get("strict", True)); return True
+        normalize(dest, game.v["native"], ignore=ignore, strict=game.v.get("strict", True)); return True
     except RuntimeError as e:
         print(f"  {e}", flush=True); return False
 
 
-def staged_shot(g, dest, state, ignore=()):
+def staged_shot(game, dest, state, ignore=()):
     """Apply the recorded state, let the game redraw it, pause, check the state really is
     what was asked for, and grab the window while the game is paused."""
-    corners = g.v.get("cursor") == "corners"
-    w, h = g.v["native"]; ox, oy, k = game_rect((w, h)); patch = 32
+    corners = game.v.get("cursor") == "corners"
+    w, h = game.v["native"]; ox, oy, k = game_rect((w, h)); patch = 32
     # SCI keeps its cursor inside the picture: two frames, cursor bottom-left then bottom-right.
     spots = [(ox, oy + (h - 1) * k, (0, h - patch, patch, patch)),
              (ox + (w - 1) * k, oy + (h - 1) * k, (w - patch, h - patch, patch, patch))] if corners else [None]
     # Objects driven every cycle by the room itself (a bobbing droid) are set but not
     # checked; objects this version doesn't have can't be set, so aren't checked either.
-    if g.v["engine"] == "sci":
-        have = sci_objects(g)
+    if game.v["engine"] == "sci":
+        have = sci_objects(game)
         for k in state:
-            if k not in have: print(f"  {k}: not in {g.v['game']} at {g.v['path']}, skipped", flush=True)
+            if k not in have: print(f"  {k}: not in {game.v['game']} at {game.v['path']}, skipped", flush=True)
         want = {k: v for k, v in state.items() if k in have and k not in ignore}
     else:
         want = {k: v for k, v in state.items() if k not in ignore}
     for attempt in range(8):
-        apply_state(g, state)
-        if g.v["engine"] == "sci":
+        apply_state(game, state)
+        if game.v["engine"] == "sci":
             # A message box opened before the room script was stopped stays up: close it
             # (the script can't open another), then set the state again.
             for _ in range(5):
-                if len(re.findall(r"^\s*\d+:", g.console("window_list")[0], re.M)) <= 1: break
-                g.resume(); g.key("Return"); time.sleep(0.4)
-            apply_state(g, state)
-        g.resume(); time.sleep(0.4)
+                if not sci_message_box_open(game.console("window_list")[0]): break
+                game.resume(); game.key("Return"); time.sleep(0.4)
+            apply_state(game, state)
+        game.resume(); time.sleep(0.4)
         paths, got = [], None
         for i, spot in enumerate(spots):
-            g.resume()
+            game.resume()
             if spot:
                 x, y, _ = spot
                 # Approach in steps: some interpreters (Mac SCI) only pick up real motion.
                 for dx in (40, 20, 0):
-                    sh("xdotool", "mousemove", "--window", g.win, str(x + (dx if i == 0 else -dx)), str(y - dx)); time.sleep(0.3)
+                    sh("xdotool", "mousemove", "--window", game.win, str(x + (dx if i == 0 else -dx)), str(y - dx)); time.sleep(0.3)
                 time.sleep(0.5)
             else:
-                g.hide_cursor()
-            got = {k: v for k, v in read_state(g).items() if k not in ignore}
+                game.park_pointer_outside_window()
+            got = {k: v for k, v in read_state(game).items() if k not in ignore}
             if got != want: break
             p = dest if not spot else f"{dest}.{i}.png"
-            if not paused_grab(g, p, ignore=[spot[2]] if spot else ()): got = None; break
+            if not paused_grab(game, p, ignore=[spot[2]] if spot else ()): got = None; break
             paths.append(p)
-        g.resume()
+        game.resume()
         if got == want and len(paths) == len(spots):
             if corners:
                 a, b = (Image.open(p).convert("RGB") for p in paths)
@@ -467,7 +477,7 @@ def capture_scene(version, scene, room, waits, dest_dir, label=None, debug=(), a
     # Starting OpenGL on a busy machine occasionally fails; just try again.
     for attempt in range(3):
         try:
-            g = Game(version, shots); break
+            game = Game(version, shots); break
         except RuntimeError as e:
             print(f"{version}/{scene}: {e}, retrying", flush=True); time.sleep(3)
     else:
@@ -475,48 +485,49 @@ def capture_scene(version, scene, room, waits, dest_dir, label=None, debug=(), a
         return []
     out = []
     try:
-        g.hide_cursor()
-        # room None = a moment during start-up (the title), captured before the usual boot keys.
-        if room is None:
-            g.proc_start = time.time()
+        game.park_pointer_outside_window()
+        # The title is a moment during start-up, captured before the usual boot keys.
+        at_startup = room is None
+        if at_startup:
+            game.proc_start = time.time()
             if setup:
                 # Start-up scenes (the intro) get their commands once the intro's script
                 # exists, e.g. to skip ahead to the title whatever the load time.
                 time.sleep(2)
-                g.console(*setup, may_resume=True); g.resume()
+                game.console(*setup, may_resume=True); game.resume()
         else:
-            g.boot()
-            g.room(room, debug, setup)
+            game.boot()
+            game.room(room, debug, setup)
         t0 = time.time()
         pending = sorted(timeline)  # [(seconds after the room change, key)], e.g. dismiss a message
         for i, w in enumerate(waits):
             while pending and pending[0][0] <= w:
                 at, key = pending.pop(0)
-                time.sleep(max(0, at - (time.time() - t0))); g.key(key)
+                time.sleep(max(0, at - (time.time() - t0))); game.key(key)
             if dismiss:
-                # Close SCI message boxes as they appear (the window list grows past the
-                # picture's own port), so events play out without guessing when text shows.
+                # Close message boxes as they appear, so events play out without guessing
+                # when text shows.
                 while time.time() - t0 < w:
                     time.sleep(min(0.5, max(0, w - (time.time() - t0))))
-                    wl = g.console("window_list")[0]; g.resume()
-                    if len(re.findall(r"^\s*\d+:", wl, re.M)) > 1: g.key("Return")
+                    window_list = game.console("window_list")[0]; game.resume()
+                    if sci_message_box_open(window_list): game.key("Return")
             time.sleep(max(0, w - (time.time() - t0)))
             if record is not None:
                 # Read the moment's state instead of photographing it (see "record"), before
                 # dismissing any message: a box doesn't change the state, staging clears it.
-                record.update(read_state(g)); g.resume(); out.append("state"); continue
+                record.update(read_state(game)); game.resume(); out.append("state"); continue
             keys = CFG["versions"][version].get("after_room", []) if after_room is None else after_room
-            for k in keys: g.key(k)
+            for k in keys: game.key(k)
             name = f"{label or scene}" + (f"-{i:02d}" if len(waits) > 1 else "") + ".png"
             dest = os.path.join(dest_dir, name)
-            if g.v.get("cursor") == "wiggle":
+            if game.v.get("cursor") == "wiggle":
                 # Mac SCI only redraws its cursor on real motion: wiggle inside, then leave.
                 for x, y in ((300, 300), (340, 320), (380, 300)):
-                    sh("xdotool", "mousemove", "--window", g.win, str(x), str(y)); time.sleep(0.3)
+                    sh("xdotool", "mousemove", "--window", game.win, str(x), str(y)); time.sleep(0.3)
             if state is not None:
-                ok = staged_shot(g, dest, state, ignore)
+                ok = staged_shot(game, dest, state, ignore)
             else:
-                ok = cursor_free_shot(g, dest) if g.v.get("cursor") == "corners" else g.screenshot(dest)
+                ok = cursor_free_shot(game, dest) if game.v.get("cursor") == "corners" else game.screenshot(dest)
             if ok:
                 c, black = stats(dest)
                 out.append(name)
@@ -527,9 +538,9 @@ def capture_scene(version, scene, room, waits, dest_dir, label=None, debug=(), a
         # One scene going wrong (debugger never answered, state not reproducible) shouldn't
         # take the rest of the version's scenes with it.
         print(f"{version}/{scene}: NO SCREENSHOT ({e})", flush=True)
-        if os.environ.get("CONSOLE_TAIL"): print(g.out[-int(os.environ["CONSOLE_TAIL"]):], flush=True)
+        if os.environ.get("CONSOLE_TAIL"): print(game.out[-int(os.environ["CONSOLE_TAIL"]):], flush=True)
     finally:
-        g.quit()
+        game.quit()
     return out
 
 

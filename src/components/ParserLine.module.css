@@ -1,4 +1,3 @@
-/* ">" and a block cursor on black. */
 .parser {
   display: flex;
   height: calc(var(--F) * 2);

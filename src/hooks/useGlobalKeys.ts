@@ -19,7 +19,7 @@ export function useGlobalKeys({ messageOpen, closeMessage, actions, set, toggleM
   const inMenu = (e: KeyboardEvent) => !!(e.target as Element).closest("#dropdown");
   const typing = () => (parser.current?.value ?? "") !== "";
   // The parser input has focus most of the time, so keys work from it too.
-  const keys = {
+  const hotkeyOptions = {
     enabled: !messageOpen,
     enableOnFormTags: ["input"] as const,
     preventDefault: true,
@@ -33,17 +33,17 @@ export function useGlobalKeys({ messageOpen, closeMessage, actions, set, toggleM
     // Enter on a link or button in the box does that instead.
     ignoreEventWhen: (e) => !!(e.target as Element).closest("a, button:not([aria-label=Close])"),
   });
-  useHotkeys("escape", toggleMenu, keys);
-  useHotkeys("f1", actions.help, keys);
-  useHotkeys("f2", () => actions.compare(), keys);
-  useHotkeys("f3", actions.swap, keys);
-  useHotkeys("f4", actions.crt, keys);
-  useHotkeys("f9", actions.link, keys);
-  useHotkeys("up", () => set.sceneStep(-1), keys);
-  useHotkeys("down", () => set.sceneStep(1), keys);
+  useHotkeys("escape", toggleMenu, hotkeyOptions);
+  useHotkeys("f1", actions.help, hotkeyOptions);
+  useHotkeys("f2", actions.toggleCompare, hotkeyOptions);
+  useHotkeys("f3", actions.swap, hotkeyOptions);
+  useHotkeys("f4", actions.toggleCrt, hotkeyOptions);
+  useHotkeys("f9", actions.link, hotkeyOptions);
+  useHotkeys("up", () => set.sceneStep(-1), hotkeyOptions);
+  useHotkeys("down", () => set.sceneStep(1), hotkeyOptions);
   // Left and right move the cursor in a half-typed command instead.
-  useHotkeys("left", () => set.versionStep(-1), { ...keys, ignoreEventWhen: (e) => inMenu(e) || typing() });
-  useHotkeys("right", () => set.versionStep(1), { ...keys, ignoreEventWhen: (e) => inMenu(e) || typing() });
+  useHotkeys("left", () => set.versionStep(-1), { ...hotkeyOptions, ignoreEventWhen: (e) => inMenu(e) || typing() });
+  useHotkeys("right", () => set.versionStep(1), { ...hotkeyOptions, ignoreEventWhen: (e) => inMenu(e) || typing() });
 
   // Not a hotkey: any letter typed, wherever the focus was, lands in the parser.
   const toParser = useEffectEvent((e: KeyboardEvent) => {

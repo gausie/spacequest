@@ -26,7 +26,7 @@
 .body > :last-child {
   margin-bottom: 0;
 }
-.fits {
+.fitsWithoutScrolling {
   overflow: hidden;
 }
 .close {
@@ -45,27 +45,27 @@
   outline: none;
 }
 /* A picture: as wide as it needs (ZoomView sizes it), never scrolled. */
-.wide {
+.holdsPicture {
   max-width: none;
 }
-.wide .body {
+.holdsPicture .body {
   overflow: hidden;
 }
-/* With an X: the box's right padding becomes the X's column. */
-.closable {
+/* A persistent box has an X: the box's right padding becomes its column. */
+.persistent {
   padding-right: calc(var(--u) * 3);
 }
-.closable .body {
+.persistent .body {
   padding-right: calc(var(--ch) * 1.5 + var(--u) * 4);
 }
-/* A short reply (no X) never scrolls: some browsers show a bar for a pixel or two of overflow,
+/* A short reply (not persistent, no X) never scrolls: some browsers show a bar for a pixel or two of overflow,
    which then narrows the text so it wraps and really does overflow. */
-.box:not(.closable) .body {
+.box:not(.persistent) .body {
   overflow: hidden;
 }
 /* When the text scrolls, the scroll area (and so its bar) starts below the X: the X ends at
    F + 2v from the top and the box's padding is 5v, so this leaves 3v clear under it in either
    font. (Safari ignores a margin on the scrollbar track, so it's the area itself that moves.) */
-.closable .body:not(.fits) {
+.persistent .body:not(.fitsWithoutScrolling) {
   margin-top: var(--F);
 }

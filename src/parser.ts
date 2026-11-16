@@ -8,16 +8,18 @@ import { type View, ZOOMS, type Zoom } from "./hooks/useView.ts";
 export interface Actions {
   scene(index: number): void;
   version(index: number): void;
-  compare(withIndex?: number): void;
+  toggleCompare(): void;
+  compareWith(index: number): void;
   swap(): void;
-  crt(): void;
-  zoom(zoom?: Zoom): void;
+  toggleCrt(): void;
+  zoom(zoom: Zoom): void;
+  cycleZoom(): void;
   // AGI's LOOK: the picture on screen (A), as big as the window allows.
   look(): void;
   link(): void;
   about(): void;
   help(): void;
-  font(): void;
+  toggleAgiFont(): void;
 }
 
 export type Parsed = { run: (act: Actions) => void } | { error: string };
@@ -110,7 +112,7 @@ function findVersion(ws: string[], state: Pick<View, "a">) {
   return best(versionVocab, rest, prefer);
 }
 
-export function parse(text: string, state: Pick<View, "a" | "compare">): Parsed {
+export function parse(text: string, state: Pick<View, "a" | "comparing">): Parsed {
   const ws = words(text).filter((w) => !FILLER.has(w));
   const [verb, ...rest] = ws;
   switch (verb) {
@@ -125,12 +127,12 @@ export function parse(text: string, state: Pick<View, "a" | "compare">): Parsed 
       return { run: (act) => act.about() };
     case "swap":
     case "s":
-      return state.compare ? { run: (act) => act.swap() } : { error: "There's nothing to swap: COMPARE first." };
+      return state.comparing ? { run: (act) => act.swap() } : { error: "There's nothing to swap: COMPARE first." };
     case "crt":
     case "r":
-      return { run: (act) => act.crt() };
+      return { run: (act) => act.toggleCrt() };
     case "font":
-      return { run: (act) => act.font() };
+      return { run: (act) => act.toggleAgiFont() };
     // LOOK on its own zooms the picture; "look orat" just goes there.
     case "look":
       if (!rest.length) return { run: (act) => act.look() };
@@ -141,16 +143,16 @@ export function parse(text: string, state: Pick<View, "a" | "compare">): Parsed 
       return { run: (act) => act.link() };
     case "zoom":
     case "z": {
+      if (!rest.length) return { run: (act) => act.cycleZoom() };
       const z = parseInt(rest[0], 10) as Zoom;
-      if (rest.length && !ZOOMS.includes(z)) return { error: "Zoom can be 1, 2 or 4." };
-      return { run: (act) => act.zoom(rest.length ? z : undefined) };
+      return ZOOMS.includes(z) ? { run: (act) => act.zoom(z) } : { error: "Zoom can be 1, 2 or 4." };
     }
     case "compare":
     case "c":
     case "vs": {
-      if (!rest.length) return { run: (act) => act.compare() };
+      if (!rest.length) return { run: (act) => act.toggleCompare() };
       const i = findVersion(rest, state);
-      return i < 0 ? { error: `There's no version called "${rest.join(" ")}".` } : { run: (act) => act.compare(i) };
+      return i < 0 ? { error: `There's no version called "${rest.join(" ")}".` } : { run: (act) => act.compareWith(i) };
     }
     case "quit":
     case "exit":

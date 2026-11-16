@@ -11,8 +11,9 @@ keyboard aren't touched.
 
 ## Prerequisites
 
-- Docker (Colima is fine). The image builds ScummVM `v2026.4.0` from source with only the AGI
-  and SCI engines, so the first build takes a few minutes.
+- Docker (Colima is fine). The image builds ScummVM from source with only the AGI and SCI
+  engines, from the branch of scummvm/scummvm#8080 (for the B&W Mac mode), so the first build
+  takes a few minutes.
 - `ffmpeg` on the host, for `process.sh`.
 - The game data in `games/<version-id>/` (gitignored), one folder per version holding just the
   files ScummVM reads; the three PC AGI versions share `games/agi-pc`. Notes on where each came
@@ -92,12 +93,13 @@ frame closest to the reference version.
 
 ## Black-and-white Mac
 
-ScummVM's AGI engine has no B&W Mac mode, so `agi-mac-bw.patch` adds `macintoshbw`. It copies
+ScummVM's AGI engine has no B&W Mac mode, so the image builds ScummVM from the branch of
+scummvm/scummvm#8080, which adds `macintoshbw` (see `SCUMMVM_REF` in the Dockerfile). It copies
 what the B&W interpreter's 68k code does: each colour is an 8x8 pattern from its `PAT#` 1001
 resource, dithered into a 640x336 bitmap (4x2 pixels per AGI pixel). Pictures tile the
 patterns by screen position; cels take the pattern row from the rows left to draw and restart
-the column with every RLE run. ScummVM shows that bitmap at 640x400. The real interpreter then
-copied it to the 512x342 screen without the last column of each AGI pixel (480x336), so
-`postprocess.py` does the same (`keep_columns: [3, 4]`) and centres it on a `canvas` of
-512x342. Text isn't reproduced (the Mac drew it in its own windows with its own fonts), but the
+the column with every RLE run. The real interpreter then copied it to the 512x342 screen without the
+last column of each AGI pixel (480x336). ScummVM keeps a 640x400 screen by drawing the first
+pattern column twice instead, so `postprocess.py` drops one of those (`keep_columns: [[1, 2, 3],
+4]`), which gives the real screen's pixels, and centres it on a `canvas` of 512x342. Text isn't reproduced (the Mac drew it in its own windows with its own fonts), but the
 crop removes it anyway.

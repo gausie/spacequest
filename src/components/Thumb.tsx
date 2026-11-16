@@ -2,18 +2,20 @@ import type { MouseEvent } from "react";
 import { type Scene, shotPath, type Version } from "../data.ts";
 import styles from "./Thumb.module.css";
 
+// → for the version on screen, or A and B when comparing.
+export type GutterMark = "" | "→" | "A" | "B";
+
 interface Props {
   version: Version;
   scene: Scene;
   index: number;
-  // In the gutter: → for the version on screen, or A and B when comparing.
-  mark: "" | "→" | "A" | "B";
+  gutterMark: GutterMark;
   onPick: (e: MouseEvent) => void;
   onDrag: (dragging: boolean) => void;
 }
 
 // A version in the strip. Selection is only ever shown in the label, never on the picture.
-export function Thumb({ version, scene, index, mark, onPick, onDrag }: Props) {
+export function Thumb({ version, scene, index, gutterMark, onPick, onDrag }: Props) {
   return (
     <button
       type="button"
@@ -29,9 +31,9 @@ export function Thumb({ version, scene, index, mark, onPick, onDrag }: Props) {
       <img alt="" draggable={false} src={shotPath(version.id, scene.id)} />
       <small className={styles.label}>
         {version.year} {version.engine}
-        {version.approx ? " *" : ""}
+        {version.standInNote ? " *" : ""}
       </small>
-      <small className={styles.label} data-mark={mark || undefined}>
+      <small className={styles.label} data-mark={gutterMark || undefined}>
         {version.name}
       </small>
     </button>

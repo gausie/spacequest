@@ -7,9 +7,11 @@ version's "playfield" in scenes.json ([x, y, w, h] in native pixels); the result
 on a black canvas of the version's native size (or its "canvas", where ScummVM's output isn't
 the real screen), so every version lines up.
 
-"keep_columns": [k, n] keeps the first k of every n columns of the playfield. The B&W Mac
-interpreter dithers into a 640 wide bitmap and copies it to its 512x342 screen without the
-last column of each AGI pixel; ScummVM shows the bitmap, so that copy is done here."""
+"keep_columns": [columns, n] keeps those columns of every n of the playfield. The B&W Mac
+interpreter dithered into a 640 wide bitmap, 4 columns per AGI pixel, and copied it to its
+512x342 screen without the last of them (480 wide). ScummVM's macintoshbw mode (PR #8080)
+keeps 640 columns by drawing the first pattern column twice ([0, 0, 1, 2]), so dropping one of
+those two ([[1, 2, 3], 4]) gives back the real screen's pixels."""
 import json, os, sys
 from PIL import Image
 
@@ -18,9 +20,9 @@ CFG = json.load(open(os.path.join(HERE, "scenes.json")))
 DEFAULT = {"agi": [0, 8, 320, 168], "sci": [0, 10, 320, 190]}
 
 
-def keep_columns(im, k, n):
-    out = Image.new("RGB", (im.width // n * k, im.height))
-    for i, c in enumerate(c for c in range(im.width) if c % n < k):
+def keep_columns(im, columns, n):
+    out = Image.new("RGB", (im.width // n * len(columns), im.height))
+    for i, c in enumerate(c for c in range(im.width) if c % n in columns):
         out.paste(im.crop((c, 0, c + 1, im.height)), (i, 0))
     return out
 

@@ -2,8 +2,7 @@ import { type Ref, useRef } from "react";
 import styles from "./ParserLine.module.css";
 
 interface Props {
-  // Each non-empty line typed, on Enter.
-  onCommand: (text: string) => void;
+  onCommand: (command: string) => void;
   ref?: Ref<HTMLInputElement>;
 }
 

@@ -4,22 +4,22 @@ import { SierraLogo } from "./SierraLogo.tsx";
 import styles from "./StatusLine.module.css";
 
 interface Props {
-  left: string;
-  right: string;
+  sceneName: string;
+  versionText: string;
   menus: Menu[];
-  openMenu: number;
-  setOpenMenu: (i: number) => void;
+  openMenu: number | null;
+  setOpenMenu: (i: number | null) => void;
 }
 
 // AGI's status line, which turns into the menu bar while you hover it, click it or press Esc,
 // as Esc did in the game. It shows what you're looking at where AGI had "Score:0 of 202".
-export function StatusLine({ left, right, menus, openMenu, setOpenMenu }: Props) {
+export function StatusLine({ sceneName, versionText, menus, openMenu, setOpenMenu }: Props) {
   const [hover, setHover] = useState(false);
-  const menu = hover || openMenu >= 0;
+  const showingMenu = hover || openMenu !== null;
   return (
     // biome-ignore lint/a11y/noStaticElementInteractions: hover and tap only reveal the menu bar; Esc opens it from the keyboard
     <header
-      className={`${styles.statusline}${menu ? ` ${styles.menu}` : ""}`}
+      className={`${styles.statusline}${showingMenu ? ` ${styles.menu}` : ""}`}
       id="statusline"
       onPointerEnter={() => setHover(true)}
       onPointerLeave={() => setHover(false)}
@@ -32,11 +32,11 @@ export function StatusLine({ left, right, menus, openMenu, setOpenMenu }: Props)
       <div className={styles.status}>
         <span className={styles.left}>
           <SierraLogo />
-          <span>{left}</span>
+          <span>{sceneName}</span>
         </span>
-        <span className={styles.right}>{right}</span>
+        <span className={styles.right}>{versionText}</span>
       </div>
-      <MenuBar menus={menus} open={openMenu} setOpen={setOpenMenu} shown={menu} />
+      <MenuBar menus={menus} open={openMenu} setOpen={setOpenMenu} visible={showingMenu} />
     </header>
   );
 }
