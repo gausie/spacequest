@@ -56,7 +56,7 @@ export const SCENES = [
   { id: "bar",         name: "Ulence Flats bar" },
   { id: "slots",       name: "Slot machine" },
   { id: "dealer",      name: "Tiny's used ships" },
-  { id: "sarien-ship", name: "The Deltaur in space" },
+  { id: "sarien-ship", name: "Deltaur approach" },
   { id: "deltaur",     name: "Deltaur hangar" },
   { id: "generator",   name: "Star Generator" },
   { id: "ending",      name: "Hero of Xenon" },

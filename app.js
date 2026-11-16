@@ -36,17 +36,32 @@ function loadLayer(layer, vi) {
 }
 
 /* ---------- message box ---------- */
-function msg(html) {
-  $("#msgbox").innerHTML = html;
+function msg(html, kind = "") {
+  // The text scrolls inside the frame, so the frame stays put on a long message.
+  $("#msgbox").innerHTML = `<button class="msgclose" aria-label="Close">X</button><div class="scroll msgbody">${html}</div>`;
+  $("#msgbox .msgclose").onclick = closeMsg;
+  $("#msgbox").className = `box msgbox ${kind}`;
   $("#msgwrap").hidden = false;
+  fitMsg();  // only once shown: hidden, everything measures 0
   $("#msgbox").focus();
+}
+// A few pixels of rounding overflow shouldn't show a scrollbar that scrolls nowhere.
+function fitMsg() {
+  const b = $(".msgbody"); if (!b) return;
+  b.classList.remove("fits");
+  b.classList.toggle("fits", b.scrollHeight - b.clientHeight <= 4);
 }
 const msgOpen = () => !$("#msgwrap").hidden;
 function closeMsg() { $("#msgwrap").hidden = true; $("#cmd").focus(); }
 $("#msgbox").tabIndex = -1;
-// Like AGI, any click or Enter/Esc puts the box away; links inside still work.
-$("#msgwrap").onclick = e => { if (!e.target.closest("a")) closeMsg(); };
+// Clicks inside the box (selecting text, links) leave it open; outside it, they close it.
+$("#msgwrap").onclick = e => { if (!e.target.closest("#msgbox")) closeMsg(); };
 const about = () => msg($("#t-about").innerHTML);
+// Clicking the screen shows that picture as big as the window allows, in a message box.
+function zoomShot(layer) {
+  const v = layer.v, s = SCENES[state.scene];
+  msg(`<p class="zcap">${s.name}: ${v.engine} ${v.name}, ${v.year}</p><img class="zimg" alt="" src="${layer.img.src}">`, "zoom");
+}
 const help = () => msg($("#t-help").innerHTML);
 
 /* ---------- rendering ---------- */
@@ -120,7 +135,7 @@ function update() {
   document.body.classList.toggle("compare", state.compare);
   fitScreen();
   $("#screen").style.setProperty("--split", `${state.split}%`);
-  $("#handle").hidden = !state.compare;
+  $("#handle").hidden = $("#handleBtn").hidden = !state.compare;
   const [l, r] = statusText();
   $("#stLeft").textContent = l; $("#stRight").textContent = r + (A.approx ? " *" : "");
   loadLayer(layers[0], state.a);
@@ -150,14 +165,15 @@ function readHash() {
   if (p.get("v") === "about") about();
 }
 
-// The 8x8 font is the point, but not easy reading for everyone: a per-viewer choice.
-const plainFont = () => document.body.classList.contains("plain");
-function setPlainFont(on) {
-  document.body.classList.toggle("plain", on);
-  try { localStorage.setItem("sq-plain-font", on ? "1" : ""); } catch {}
-  fitScreen();
+// Reading text is in the VGA font (body.vga in the page); the AGI 8x8 for everything is a
+// per-viewer choice.
+const agiFont = () => !document.body.classList.contains("vga");
+function setAgiFont(on) {
+  document.body.classList.toggle("vga", !on);
+  try { localStorage.setItem("sq-font", on ? "agi" : ""); } catch {}
+  fitScreen(); updateScrollers();
 }
-try { if (localStorage.getItem("sq-plain-font")) document.body.classList.add("plain"); } catch {}
+try { if (localStorage.getItem("sq-font") === "agi") document.body.classList.remove("vga"); } catch {}
 
 /* ---------- actions (menus, parser and keys all go through these) ---------- */
 async function copyLink() {
@@ -172,7 +188,7 @@ const act = {
   crt: () => { if (!crtOK) return msg("<p>This browser has no WebGL2, so no CRT.</p>"); state.crt = !state.crt; update(); },
   zoom: z => { state.zoom = z ?? ({ 1: 2, 2: 4, 4: 1 })[state.zoom]; update(); },
   link: copyLink, about, help,
-  font: () => setPlainFont(!plainFont()),
+  font: () => setAgiFont(!agiFont()),
 };
 
 const logo = () => $("#t-logo").content.firstElementChild.cloneNode(true);
@@ -192,7 +208,7 @@ initMenus([
     ...[1, 2, 4].map(z => ({ label: `Zoom ${z}x`, radio: state.zoom === z, run: () => act.zoom(z) })),
     { label: "CRT", keys: "<F4>", check: state.crt, disabled: !crtOK, run: act.crt },
     "-",
-    { label: "Readable font", check: plainFont(), run: act.font },
+    { label: "Use AGI font", check: agiFont(), run: act.font },
   ] },
 ]);
 
@@ -218,6 +234,13 @@ $("#handleBtn").onpointerdown = e => {
   t.onpointerup = () => { t.onpointermove = null; };
 };
 
+screen.onclick = e => {
+  if (e.target.closest(".handle, .hbtn")) return;
+  const r = screen.getBoundingClientRect();
+  // When comparing, the side you clicked.
+  const right = state.compare && (e.clientX - r.left) / r.width * 100 > state.split;
+  zoomShot(layers[right ? 1 : 0]);
+};
 screen.ondragover = e => e.preventDefault();
 screen.ondrop = e => {
   e.preventDefault();
@@ -231,7 +254,7 @@ screen.ondrop = e => {
 const FKEYS = { F1: help, F2: () => act.compare(), F3: () => state.compare && act.swap(), F4: act.crt, F9: copyLink };
 document.addEventListener("keydown", e => {
   if (msgOpen()) {
-    if (["Enter", "Escape", " "].includes(e.key)) { e.preventDefault(); closeMsg(); }
+    if (["Enter", "Escape"].includes(e.key) && !e.target.closest("a, button:not(.msgclose)")) { e.preventDefault(); closeMsg(); }
     return;
   }
   if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("#dropdown")) return;
@@ -252,7 +275,7 @@ document.addEventListener("keydown", e => {
 });
 
 let resizeTimer;
-window.addEventListener("resize", () => { fitScreen(); updateScrollers(); clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawCRT, 100); });
+window.addEventListener("resize", () => { fitScreen(); updateScrollers(); fitMsg(); clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawCRT, 100); });
 
 installCursor();
 readHash(); update();

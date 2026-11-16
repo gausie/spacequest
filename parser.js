@@ -6,7 +6,7 @@ import { VERSIONS, SCENES } from "./data.js";
 const SCENE_WORDS = {
   title: "intro", closet: "janitor", archive: "library cartridge", "pod-bay": "escape", desert: "sand",
   spider: "droid", crash: "wreck", orat: "", underground: "", keronian: "hologram welcome",
-  bar: "ulence band", slots: "slot", dealer: "tiny dealer ship", "sarien-ship": "space", deltaur: "hangar",
+  bar: "ulence band", slots: "slot", dealer: "tiny dealer ship", "sarien-ship": "space arrive arrival", deltaur: "hangar",
   generator: "star", ending: "xenon end hero mop",
 };
 const VERSION_WORDS = {

@@ -12,13 +12,14 @@
   --cur-arrow: default; --cur-point: pointer;
   color-scheme: dark;
 }
-/* Display > Readable font: the PC's VGA text font (9x16, stretched for 4:3 so a cell is 1.35 em
-   tall), the same family as AGI's 8x8 but finer. One of its cells fills one of our text rows. */
-body.plain { --vt: "IBM VGA 9x16", "Courier New", monospace; font-size: calc(var(--F) / 1.35); line-height: 1.35; }
-body.plain .statusline, body.plain .status, body.plain .menubar, body.plain .parser { align-items: center; }
-body.plain .msgbox { line-height: 1.35; }
+/* Reading text is in the PC's VGA text font (9x16, stretched for 4:3 so a cell is 1.35 em tall),
+   the same family as AGI's 8x8 but finer; one of its cells fills one of our text rows. Display >
+   Use AGI font drops the .vga class and everything is in the 8x8. */
+body.vga { --vt: "IBM VGA 9x16", "Courier New", monospace; font-size: calc(var(--F) / 1.35); line-height: 1.35; }
+body.vga .statusline, body.vga .status, body.vga .menubar, body.vga .parser { align-items: center; }
+body.vga .msgbox { line-height: 1.35; }
 /* Arrows, marks and the > prompt stay in the 8x8 font: they're the interface, not the reading. */
-body.plain .vscroll, body.plain .parser label, body.plain .handle button, body.plain .scene::before, body.plain .thumb small::before, body.plain .dd-item .mk { font-family: "AGI PC 8x8", monospace; font-size: var(--F); line-height: 1; -webkit-font-smoothing: none; }
+body.vga .vscroll, body.vga .parser label, body.vga .hbtn, body.vga .scene::before, body.vga .thumb small::before, body.vga .dd-item .mk { font-family: "AGI PC 8x8", monospace; font-size: var(--F); line-height: 1; -webkit-font-smoothing: none; }
 @media (max-height: 860px), (max-width: 1300px) { :root { --F: 20px; } }
 @media (max-width: 700px) { :root { --F: 16px; } }
 * { box-sizing: border-box; }
@@ -46,6 +47,8 @@ p { margin: 0 0 var(--F); }
 /* One text cell, like the glyph it is. */
 .logo { width: var(--ch); height: var(--F); flex: none; fill: currentColor; shape-rendering: crispEdges; display: block; }
 .mtitle .logo { display: inline-block; vertical-align: top; }
+/* In running text: GitHub's mark at 16x16 in one text cell (half-size pixels), a space before the name. */
+.logo.inline { display: inline-block; vertical-align: top; margin-right: var(--ch); }
 .menubar { display: none; gap: var(--ch); }
 .statusline.menu .status { display: none; }
 .statusline.menu .menubar { display: flex; }
@@ -97,7 +100,7 @@ p { margin: 0 0 var(--F); }
 .screenwin { display: flex; flex-direction: column; gap: var(--F); }
 .frame { overflow: auto; background: #000; align-self: center; max-width: 100%; flex: none; scrollbar-color: var(--e8) var(--e0); }
 /* fitScreen() in app.js sizes the frame and screen in pixels. */
-.screen { position: relative; aspect-ratio: 4 / 3; }
+.screen { position: relative; aspect-ratio: 4 / 3; overflow: hidden; }
 /* The screen is always 4:3; a picture that isn't (a Mac's square pixels) is letterboxed on black. */
 .layer { position: absolute; inset: 0; background: var(--e0); }
 .layer img, .layer canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; object-fit: contain; }
@@ -106,7 +109,8 @@ p { margin: 0 0 var(--F); }
 #layerB { display: none; }
 .compare #layerB { display: block; clip-path: inset(0 0 0 var(--split, 50%)); }
 .handle { position: absolute; top: 0; bottom: 0; left: var(--split, 50%); width: var(--u); background: var(--e15); transform: translateX(-50%); }
-.handle button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--e15); color: var(--e0); padding: 0 var(--u); height: var(--F); cursor: ew-resize; touch-action: none; }
+/* The ◄► grip follows the divider but stops at the screen's edges, so it never sticks out. */
+.hbtn { --w: calc(var(--ch) * 2 + var(--u) * 2); position: absolute; top: 50%; left: clamp(0px, calc(var(--split, 50%) - var(--w) / 2), calc(100% - var(--w))); width: var(--w); transform: translateY(-50%); background: var(--e15); color: var(--e0); height: var(--F); cursor: ew-resize; touch-action: none; text-align: center; }
 .drop { position: absolute; inset: 0; display: none; grid-template-columns: 1fr 1fr; pointer-events: none; }
 .drop span { display: grid; place-items: center; text-align: center; line-height: 1.2; background: #000000aa; border: var(--u) dashed var(--e15); color: var(--e15); }
 .dragging .drop { display: grid; }
@@ -137,8 +141,23 @@ p { margin: 0 0 var(--F); }
 /* Message box over everything, centred like AGI's print(). */
 .msgwrap { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: var(--F); }
 /* Sized to its text up to 36 characters, as AGI wraps a message; focused only so Enter closes it. */
-.msgbox { width: fit-content; max-width: min(calc(var(--ch) * 36 + var(--u) * 14), 100%); max-height: 100%; overflow: auto; line-height: 1; outline: none; }
+.msgbox { width: fit-content; max-width: min(calc(var(--ch) * 37.5 + var(--u) * 14), 100%); max-height: 100%; display: flex; flex-direction: column; line-height: 1; outline: none; }
+.msgbody { min-height: 0; }
+/* The close cell sits in the top-right corner inside the frame, in the 8x8 font. The text keeps
+   clear of that column, and a scrollbar, when there is one, runs down it under the X. */
+.msgbox { padding-right: calc(var(--u) * 3); }
+.msgbody { padding-right: calc(var(--ch) * 1.5 + var(--u) * 4); }
+.msgbody::-webkit-scrollbar-track { margin-top: calc(var(--F) + var(--v) * 2); }
+.msgbody.fits { overflow: hidden; }
+.msgclose { position: absolute; top: calc(var(--v) * 2); right: calc(var(--u) * 3); width: calc(var(--ch) * 1.5); height: var(--F); display: grid; place-items: center; font-family: "AGI PC 8x8", monospace; font-size: var(--F); line-height: 1; -webkit-font-smoothing: none; }
+.msgclose:hover, .msgclose:focus-visible { background: var(--e0); color: var(--e15); outline: none; }
 .msgbox p:last-child, .msgbox dl:last-child { margin-bottom: 0; }
+/* The zoomed picture: 4:3, as large as fits under its caption, pixels kept sharp. */
+.msgbox.zoom { max-width: none; }
+.msgbox.zoom .msgbody { overflow: hidden; }
+.zcap { margin: 0 0 calc(var(--v) * 3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zimg { display: block; width: min(calc(100vw - var(--F) * 2 - var(--u) * 14 - var(--ch) * 1.5), calc((100vh - var(--F) * 3 - var(--v) * 13) * 4 / 3)); aspect-ratio: 4 / 3; object-fit: contain; image-rendering: pixelated; background: var(--e0); }
+.screen { cursor: var(--cur-point); }
 .keys { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--ch); margin: 0 0 var(--F); }
 .keys dt { color: var(--e4); } .keys dd { margin: 0; }
 
