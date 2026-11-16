@@ -1,5 +1,6 @@
 /* AGI's frame: white box, red lines inset one pixel at the sides (two thick) and half a row at the
-   top and bottom, as GfxMgr::drawBox draws it for EGA. Other modules `composes: box` and `scroll`.
+   top and bottom, as GfxMgr::drawBox draws it for EGA (--frame changes the red). Other modules
+   `composes: box` and `scroll`.
    The base rules are in :where() (no specificity), so a component's own rules always win over them
    whatever order the stylesheets end up in (hot reloads can reorder them). */
 :where(.box) {
@@ -15,7 +16,7 @@
   position: absolute;
   pointer-events: none;
   inset: calc(var(--v) / 2) var(--u);
-  border: solid var(--e4);
+  border: solid var(--frame, var(--e4));
   border-width: calc(var(--v) / 2) var(--u);
 }
 

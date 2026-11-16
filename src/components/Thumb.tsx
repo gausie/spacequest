@@ -28,10 +28,9 @@ export function Thumb({ version, scene, index, gutterMark, onPick, onDrag }: Pro
       }}
       onDragEnd={() => onDrag(false)}
     >
-      <img alt="" draggable={false} src={shotPath(version.id, scene.id)} />
+      <img alt="" draggable={false} loading="lazy" decoding="async" src={shotPath(version.id, scene.id)} />
       <small className={styles.label}>
         {version.year} {version.engine}
-        {version.standInNote ? " *" : ""}
       </small>
       <small className={styles.label} data-mark={gutterMark || undefined}>
         {version.name}

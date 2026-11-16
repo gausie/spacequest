@@ -61,16 +61,11 @@ export function Viewer({ view, set, onZoom }: Props) {
             comparing={view.comparing}
             crt={crt}
             zoom={view.zoom}
-            dividerPercent={view.dividerPercent}
             frameWidth={frameWidth}
             showDropTargets={draggingVersion}
-            onMoveDivider={set.moveDivider}
+            onStopComparing={set.toggleCompare}
             onZoom={onZoom}
-            onDropVersion={(index, side) => {
-              setDraggingVersion(false);
-              if (side === "b") set.compareWith(index);
-              else set.version(index);
-            }}
+            onDropVersion={(index, side) => set.pick(index, side === "b")}
           />
         )}
       </section>
@@ -81,7 +76,7 @@ export function Viewer({ view, set, onZoom }: Props) {
         b={view.b}
         comparing={view.comparing}
         onDrag={setDraggingVersion}
-        onPick={(index, asB) => (asB ? set.compareWith(index) : set.version(index))}
+        onPick={set.pick}
       />
     </section>
   );

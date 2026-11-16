@@ -1,13 +1,11 @@
 import { type RefObject, useEffect, useEffectEvent } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
 import type { Actions } from "../parser.ts";
-import type { ViewSetters } from "./useView.ts";
 
 interface Options {
   messageOpen: boolean;
   closeMessage: () => void;
   actions: Actions;
-  set: ViewSetters;
   toggleMenu: () => void;
   parser: RefObject<HTMLInputElement | null>;
 }
@@ -15,7 +13,7 @@ interface Options {
 // The keyboard, as in the game: letters go to the parser, arrows browse, function keys do what
 // the menus say, Esc opens the menu bar. An open message box takes only Enter and Esc, to close.
 // Open menus handle their own keys (Dropdown stops them reaching here).
-export function useGlobalKeys({ messageOpen, closeMessage, actions, set, toggleMenu, parser }: Options) {
+export function useGlobalKeys({ messageOpen, closeMessage, actions, toggleMenu, parser }: Options) {
   const inMenu = (e: KeyboardEvent) => !!(e.target as Element).closest("#dropdown");
   const typing = () => (parser.current?.value ?? "") !== "";
   // The parser input has focus most of the time, so keys work from it too.
@@ -39,11 +37,17 @@ export function useGlobalKeys({ messageOpen, closeMessage, actions, set, toggleM
   useHotkeys("f3", actions.swap, hotkeyOptions);
   useHotkeys("f4", actions.toggleCrt, hotkeyOptions);
   useHotkeys("f9", actions.link, hotkeyOptions);
-  useHotkeys("up", () => set.sceneStep(-1), hotkeyOptions);
-  useHotkeys("down", () => set.sceneStep(1), hotkeyOptions);
+  useHotkeys("up", () => actions.sceneStep(-1), hotkeyOptions);
+  useHotkeys("down", () => actions.sceneStep(1), hotkeyOptions);
   // Left and right move the cursor in a half-typed command instead.
-  useHotkeys("left", () => set.versionStep(-1), { ...hotkeyOptions, ignoreEventWhen: (e) => inMenu(e) || typing() });
-  useHotkeys("right", () => set.versionStep(1), { ...hotkeyOptions, ignoreEventWhen: (e) => inMenu(e) || typing() });
+  useHotkeys("left", () => actions.versionStep(-1), {
+    ...hotkeyOptions,
+    ignoreEventWhen: (e) => inMenu(e) || typing(),
+  });
+  useHotkeys("right", () => actions.versionStep(1), {
+    ...hotkeyOptions,
+    ignoreEventWhen: (e) => inMenu(e) || typing(),
+  });
 
   // Not a hotkey: any letter typed, wherever the focus was, lands in the parser.
   const toParser = useEffectEvent((e: KeyboardEvent) => {

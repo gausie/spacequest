@@ -1,21 +1,13 @@
 /* A pull-down menu: AGI's frame in black, the item under the pointer or focus inverted. */
 .dropdown {
+  composes: box from "./Box.module.css";
+  --frame: var(--e0);
   position: fixed;
   z-index: 40;
   min-width: calc(var(--ch) * 16);
-  background: var(--e15);
-  color: var(--e0);
   padding: calc(var(--v) * 4) calc(var(--u) * 4);
   max-height: calc(100vh - var(--F) * 2);
   overflow: auto;
-}
-.dropdown::before {
-  content: "";
-  position: absolute;
-  pointer-events: none;
-  inset: calc(var(--v) / 2) var(--u);
-  border: solid var(--e0);
-  border-width: calc(var(--v) / 2) var(--u);
 }
 .item {
   display: flex;

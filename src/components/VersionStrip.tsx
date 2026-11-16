@@ -16,14 +16,18 @@ interface Props {
 // The versions, in release order. No scrollbar: ◄ ► cells inside the frame, level with the
 // pictures, show when there's more that way, and each click moves about a box-width.
 export function VersionStrip({ scene, a, b, comparing, onPick, onDrag, ref }: Props) {
-  const strip = useRef<HTMLDivElement>(null);
+  const strip = useRef<HTMLDivElement>(null),
+    grid = useRef<HTMLDivElement>(null);
   const [canScroll, setCanScroll] = useState({ left: false, right: false });
 
   const updateScrollArrows = useCallback(() => {
     const s = strip.current;
     if (!s) return;
     const furthest = s.scrollWidth - s.clientWidth;
-    setCanScroll({ left: s.scrollLeft > 1, right: s.scrollLeft < furthest - 1 });
+    const left = s.scrollLeft > 1,
+      right = s.scrollLeft < furthest - 1;
+    // Scroll events come every frame; only a change needs a render.
+    setCanScroll((p) => (p.left === left && p.right === right ? p : { left, right }));
   }, []);
 
   useLayoutEffect(() => {
@@ -34,14 +38,10 @@ export function VersionStrip({ scene, a, b, comparing, onPick, onDrag, ref }: Pr
   }, [updateScrollArrows]);
 
   // Keep the version on screen in view as it changes (arrow keys, the parser).
-  // biome-ignore lint/correctness/useExhaustiveDependencies: a and comparing are what move the mark
   useEffect(() => {
-    strip.current
-      ?.querySelector("[data-mark='→'], [data-mark='A']")
-      ?.closest("button")
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    grid.current?.children[a]?.scrollIntoView({ block: "nearest", inline: "nearest" });
     updateScrollArrows();
-  }, [a, comparing, updateScrollArrows]);
+  }, [a, updateScrollArrows]);
 
   const scrollAboutAPage = (direction: 1 | -1) =>
     strip.current?.scrollBy({ left: direction * strip.current.clientWidth * 0.8, behavior: "smooth" });
@@ -71,7 +71,7 @@ export function VersionStrip({ scene, a, b, comparing, onPick, onDrag, ref }: Pr
         </button>
       )}
       <div className={styles.strip} ref={strip} onScroll={updateScrollArrows}>
-        <div className={styles.grid}>
+        <div className={styles.grid} ref={grid}>
           {VERSIONS.map((v, i) => (
             <Thumb
               key={v.id}

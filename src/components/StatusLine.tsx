@@ -36,7 +36,7 @@ export function StatusLine({ sceneName, versionText, menus, openMenu, setOpenMen
         </span>
         <span className={styles.right}>{versionText}</span>
       </div>
-      <MenuBar menus={menus} open={openMenu} setOpen={setOpenMenu} visible={showingMenu} />
+      {showingMenu && <MenuBar menus={menus} open={openMenu} setOpen={setOpenMenu} />}
     </header>
   );
 }

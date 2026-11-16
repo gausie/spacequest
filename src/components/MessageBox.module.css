@@ -22,12 +22,19 @@
 .body {
   composes: scroll from "./Box.module.css";
   min-height: 0;
+  /* Only long text scrolls: some browsers show a bar for a pixel or two of overflow, which then
+     narrows the text so it wraps and really does overflow. */
+  overflow: hidden;
 }
 .body > :last-child {
   margin-bottom: 0;
 }
-.fitsWithoutScrolling {
-  overflow: hidden;
+/* The scroll area (and so its bar) starts below the X: the X ends at F + 2v from the top and the
+   box's padding is 5v, so this leaves 3v clear under it in either font. (Safari ignores a margin
+   on the scrollbar track, so it's the area itself that moves.) */
+.scrolls {
+  overflow-y: auto;
+  margin-top: var(--F);
 }
 .close {
   position: absolute;
@@ -44,28 +51,14 @@
   color: var(--e15);
   outline: none;
 }
-/* A picture: as wide as it needs (ZoomView sizes it), never scrolled. */
-.holdsPicture {
+/* A picture is as wide as it needs (ZoomView sizes it). */
+.picture {
   max-width: none;
 }
-.holdsPicture .body {
-  overflow: hidden;
-}
-/* A persistent box has an X: the box's right padding becomes its column. */
-.persistent {
+/* A box with an X: the box's right padding becomes its column. */
+.closable {
   padding-right: calc(var(--u) * 3);
 }
-.persistent .body {
+.closable .body {
   padding-right: calc(var(--ch) * 1.5 + var(--u) * 4);
-}
-/* A short reply (not persistent, no X) never scrolls: some browsers show a bar for a pixel or two of overflow,
-   which then narrows the text so it wraps and really does overflow. */
-.box:not(.persistent) .body {
-  overflow: hidden;
-}
-/* When the text scrolls, the scroll area (and so its bar) starts below the X: the X ends at
-   F + 2v from the top and the box's padding is 5v, so this leaves 3v clear under it in either
-   font. (Safari ignores a margin on the scrollbar track, so it's the area itself that moves.) */
-.persistent .body:not(.fitsWithoutScrolling) {
-  margin-top: var(--F);
 }

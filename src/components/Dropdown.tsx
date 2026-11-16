@@ -1,12 +1,18 @@
 import { type KeyboardEvent, useLayoutEffect, useRef, useState } from "react";
+import { wrap } from "../hooks/useView.ts";
 import styles from "./Dropdown.module.css";
 
-export type MenuItem =
-  | { label: string; keys?: string; selected?: boolean; checked?: boolean; disabled?: boolean; run: () => void }
-  | "-";
+export interface MenuItem {
+  label: string;
+  keys?: string;
+  selected?: boolean;
+  checked?: boolean;
+  disabled?: boolean;
+  run: () => void;
+}
 
 interface Props {
-  items: MenuItem[];
+  groups: MenuItem[][];
   anchor: HTMLElement;
   onClose: () => void;
   onMoveToAdjacentMenu: (direction: 1 | -1) => void;
@@ -17,7 +23,7 @@ const enabledItems = (box: HTMLElement | null) => [
 ];
 
 // One open menu: AGI's box with a black frame, the item under the pointer or focus inverted.
-export function Dropdown({ items, anchor, onClose, onMoveToAdjacentMenu }: Props) {
+export function Dropdown({ groups, anchor, onClose, onMoveToAdjacentMenu }: Props) {
   const box = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ top: 0, left: 0 });
 
@@ -32,8 +38,8 @@ export function Dropdown({ items, anchor, onClose, onMoveToAdjacentMenu }: Props
   const onKeyDown = (e: KeyboardEvent) => {
     const enabled = enabledItems(box.current);
     const i = enabled.indexOf(document.activeElement as HTMLButtonElement);
-    if (e.key === "ArrowDown") enabled[(i + 1) % enabled.length]?.focus();
-    else if (e.key === "ArrowUp") enabled[(i - 1 + enabled.length) % enabled.length]?.focus();
+    if (e.key === "ArrowDown") enabled[wrap(i, 1, enabled.length)]?.focus();
+    else if (e.key === "ArrowUp") enabled[wrap(i, -1, enabled.length)]?.focus();
     else if (e.key === "ArrowRight") onMoveToAdjacentMenu(1);
     else if (e.key === "ArrowLeft") onMoveToAdjacentMenu(-1);
     else if (e.key === "Escape") onClose();
@@ -44,11 +50,10 @@ export function Dropdown({ items, anchor, onClose, onMoveToAdjacentMenu }: Props
 
   return (
     <div className={styles.dropdown} id="dropdown" role="menu" ref={box} style={pos} onKeyDown={onKeyDown}>
-      {items.map((it, i) =>
-        it === "-" ? (
-          // A separator is keyed by the item before it; labels are unique within a menu.
-          <div key={`after ${(items[i - 1] as Exclude<MenuItem, "-">).label}`} className={styles.sep} />
-        ) : (
+      {groups.flatMap((group, g) => [
+        // biome-ignore lint/suspicious/noArrayIndexKey: a menu's groups never change order
+        g > 0 && <div key={`sep${g}`} className={styles.sep} />,
+        ...group.map((it) => (
           <button
             key={it.label}
             type="button"
@@ -68,8 +73,8 @@ export function Dropdown({ items, anchor, onClose, onMoveToAdjacentMenu }: Props
             </span>
             <span>{it.keys}</span>
           </button>
-        ),
-      )}
+        )),
+      ])}
     </div>
   );
 }

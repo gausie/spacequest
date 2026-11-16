@@ -8,8 +8,8 @@ set -eu
 [ $# -eq 3 ] || { echo "usage: $0 <raw.png> <version-id> <scene-id>" >&2; exit 1; }
 here=$(cd "$(dirname "$0")" && pwd)
 size=$(node --input-type=module -e "
-  const { ALL_VERSIONS, shotSize } = await import('file://$here/src/data.ts');
-  const v = ALL_VERSIONS.find(v => v.id === process.argv[1]);
+  const { VERSIONS, shotSize } = await import('file://$here/src/data.ts');
+  const v = VERSIONS.find(v => v.id === process.argv[1]);
   if (!v) { console.error('unknown version ' + process.argv[1]); process.exit(1); }
   console.log(shotSize(v).join(' '));
 " "$2")

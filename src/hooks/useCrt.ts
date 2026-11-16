@@ -41,24 +41,40 @@ function frameCanvas(v: Version, img: HTMLImageElement): Source {
 // A WebGL CRT on a canvas. The returned draw(img, version) shades the picture for the canvas's
 // current size: plan() picks the monitor's preset, with scanlines antialiased from 2 pixels per
 // line, over the whole frame (a letterboxed picture's bars are part of the scan too).
+// The WebGL context is only made once the CRT is first drawn, and given back on unmount, since
+// browsers keep only a few alive.
 export function useCrt(canvas: RefObject<HTMLCanvasElement | null>) {
   const renderer = useRef<Renderer | null>(null);
+  // Which picture the renderer has, so a resize only redraws instead of uploading it again.
+  const uploaded = useRef("");
 
   useEffect(() => {
-    if (!crtSupported || !canvas.current || renderer.current) return;
-    try {
-      renderer.current = new Renderer(canvas.current);
-    } catch (e) {
-      console.error(e);
-    }
+    const c = canvas.current;
+    return () => {
+      // StrictMode's rehearsal unmount leaves the canvas in the page, and a canvas can't get a
+      // second context, so only a real unmount gives it back.
+      if (c?.isConnected) return;
+      renderer.current?.gl.getExtension("WEBGL_lose_context")?.loseContext();
+      renderer.current = null;
+    };
   }, [canvas]);
 
   return useCallback(
     (img: HTMLImageElement, v: Version) => {
-      const r = renderer.current,
-        c = canvas.current;
-      if (!r || !c || !img.complete || !img.naturalWidth) return;
-      r.setSource(frameCanvas(v, img));
+      const c = canvas.current;
+      if (!crtSupported || !c || !img.complete || !img.naturalWidth) return;
+      try {
+        renderer.current ??= new Renderer(c);
+      } catch (e) {
+        console.error(e);
+        return;
+      }
+      const r = renderer.current;
+      const picture = `${v.id} ${img.currentSrc}`;
+      if (uploaded.current !== picture) {
+        r.setSource(frameCanvas(v, img));
+        uploaded.current = picture;
+      }
       const box = c.getBoundingClientRect(),
         dpr = window.devicePixelRatio || 1;
       c.width = Math.round(box.width * dpr);

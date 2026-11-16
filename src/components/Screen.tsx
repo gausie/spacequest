@@ -1,4 +1,4 @@
-import { type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, useRef } from "react";
+import { type CSSProperties, type DragEvent, type MouseEvent, type PointerEvent, useRef, useState } from "react";
 import type { Scene, Version } from "../data.ts";
 import styles from "./Screen.module.css";
 import { ScreenLayer } from "./ScreenLayer.tsx";
@@ -11,10 +11,9 @@ interface Props {
   crt: boolean;
   // The screen inside the frame is zoom times bigger, and the frame scrolls.
   zoom: number;
-  dividerPercent: number;
   frameWidth: number;
   showDropTargets: boolean;
-  onMoveDivider: (percent: number) => void;
+  onStopComparing: () => void;
   onDropVersion: (index: number, side: "a" | "b") => void;
   onZoom: (side: "a" | "b") => void;
 }
@@ -26,14 +25,14 @@ export function Screen({
   comparing,
   crt,
   zoom,
-  dividerPercent,
   frameWidth,
   showDropTargets,
-  onMoveDivider,
+  onStopComparing,
   onDropVersion,
   onZoom,
 }: Props) {
   const screen = useRef<HTMLDivElement>(null);
+  const [dividerPercent, setDividerPercent] = useState(50);
   const fractionAcross = (x: number) => {
     const r = screen.current?.getBoundingClientRect();
     return r ? (x - r.left) / r.width : 0.5;
@@ -49,7 +48,8 @@ export function Screen({
     onDropVersion(Number(e.dataTransfer.getData("text/plain")), fractionAcross(e.clientX) > 0.5 ? "b" : "a");
   };
   const dragGrip = (e: PointerEvent<HTMLButtonElement>) => {
-    if (e.currentTarget.hasPointerCapture(e.pointerId)) onMoveDivider(fractionAcross(e.clientX) * 100);
+    if (e.currentTarget.hasPointerCapture(e.pointerId))
+      setDividerPercent(Math.min(100, Math.max(0, fractionAcross(e.clientX) * 100)));
   };
 
   const screenWidth = frameWidth * zoom;
@@ -85,6 +85,7 @@ export function Screen({
             aria-label="Move the divider"
             onPointerDown={(e) => e.currentTarget.setPointerCapture(e.pointerId)}
             onPointerMove={dragGrip}
+            onDoubleClick={onStopComparing}
           >
             ◄►
           </button>

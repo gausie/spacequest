@@ -15,6 +15,8 @@ export function HelpText() {
         <dd>see the picture up close</dd>
         <dt>zoom 2, crt</dt>
         <dd>display</dd>
+        <dt>save, restore</dt>
+        <dd>copy a link to this view, or start over</dd>
       </dl>
       <p>
         Keys: ◄ ► version, ▲ ▼ scene, F2 compare, F3 swap, F4 CRT, F9 copy link. Drag a version onto the screen to

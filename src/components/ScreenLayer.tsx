@@ -22,10 +22,10 @@ export function ScreenLayer({ id, version, scene, crt, screenWidth, className = 
   }, [crt, version, drawCrt]);
 
   // A new picture redraws on load; this covers CRT being switched on and resizes.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: screenWidth and scene are what trigger a redraw
+  // biome-ignore lint/correctness/useExhaustiveDependencies: screenWidth is what triggers a redraw
   useEffect(() => {
     drawCrtIfOn();
-  }, [drawCrtIfOn, screenWidth, scene]);
+  }, [drawCrtIfOn, screenWidth]);
 
   return (
     <div className={[styles.layer, crt && styles.crt, className].filter(Boolean).join(" ")} id={id}>

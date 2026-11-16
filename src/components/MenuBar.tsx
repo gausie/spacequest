@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useRef } from "react";
+import { wrap } from "../hooks/useView.ts";
 import { Dropdown, type MenuItem } from "./Dropdown.tsx";
 import styles from "./MenuBar.module.css";
 
@@ -7,17 +8,17 @@ import styles from "./MenuBar.module.css";
 export interface Menu {
   title: string;
   icon?: ReactNode;
-  items: MenuItem[];
+  // Separators go between groups.
+  groups: MenuItem[][];
 }
 
 interface Props {
   menus: Menu[];
   open: number | null;
   setOpen: (i: number | null) => void;
-  visible: boolean;
 }
 
-export function MenuBar({ menus, open, setOpen, visible }: Props) {
+export function MenuBar({ menus, open, setOpen }: Props) {
   const titles = useRef<(HTMLButtonElement | null)[]>([]);
 
   useEffect(() => {
@@ -29,7 +30,6 @@ export function MenuBar({ menus, open, setOpen, visible }: Props) {
     return () => document.removeEventListener("pointerdown", closeOnClickAway);
   }, [open, setOpen]);
 
-  if (!visible) return null;
   const anchor = open === null ? null : titles.current[open];
 
   return (
@@ -59,10 +59,10 @@ export function MenuBar({ menus, open, setOpen, visible }: Props) {
       {open !== null && anchor && (
         <Dropdown
           key={open}
-          items={menus[open].items}
+          groups={menus[open].groups}
           anchor={anchor}
           onClose={() => setOpen(null)}
-          onMoveToAdjacentMenu={(direction) => setOpen((open + direction + menus.length) % menus.length)}
+          onMoveToAdjacentMenu={(direction) => setOpen(wrap(open, direction, menus.length))}
         />
       )}
     </nav>

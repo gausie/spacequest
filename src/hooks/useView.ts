@@ -1,5 +1,5 @@
 import { parseAsBoolean, parseAsNumberLiteral, parseAsStringLiteral, useQueryStates } from "nuqs";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { SCENES, VERSIONS } from "../data.ts";
 
 // What's on screen, by index into SCENES and VERSIONS.
@@ -14,7 +14,6 @@ export interface View {
   comparing: boolean;
   crt: boolean;
   zoom: Zoom;
-  dividerPercent: number;
 }
 
 const sceneIds = SCENES.map((s) => s.id),
@@ -33,12 +32,12 @@ const parsers = {
 };
 const urlKeys = { scene: "s", zoom: "z" };
 
-const step = <T>(list: readonly T[], current: T, by: number) =>
-  list[(list.indexOf(current) + by + list.length) % list.length];
+// i moved by `by` places round a list of n, wrapping at either end.
+export const wrap = (i: number, by: number, n: number) => (i + by + n) % n;
+const step = <T>(list: readonly T[], current: T, by: number) => list[wrap(list.indexOf(current), by, list.length)];
 
 export function useView() {
   const [q, setQ] = useQueryStates(parsers, { urlKeys });
-  const [dividerPercent, setDividerPercent] = useState(50);
   // Turning comparing off and on again brings back the same B.
   const lastB = useRef(q.b ?? DEFAULT_B);
   useEffect(() => {
@@ -52,7 +51,6 @@ export function useView() {
     comparing: q.b !== null,
     crt: q.crt,
     zoom: q.zoom,
-    dividerPercent,
   };
 
   const set = {
@@ -62,11 +60,17 @@ export function useView() {
     versionStep: (by: number) => setQ((p) => ({ a: step(versionIds, p.a, by) })),
     toggleCompare: () => setQ((p) => ({ b: p.b ? null : lastB.current })),
     compareWith: (index: number) => setQ({ b: versionIds[index] }),
+    // Shift-click and drops pick B; anything else picks A.
+    pick: (index: number, asB: boolean) => (asB ? setQ({ b: versionIds[index] }) : setQ({ a: versionIds[index] })),
     swap: () => setQ((p) => (p.b ? { a: p.b, b: p.a } : {})),
     toggleCrt: () => setQ((p) => ({ crt: !p.crt })),
     zoom: (zoom: Zoom) => setQ({ zoom }),
     cycleZoom: () => setQ((p) => ({ zoom: NEXT_ZOOM[p.zoom] })),
-    moveDivider: (percent: number) => setDividerPercent(Math.min(100, Math.max(0, percent))),
+    // Every setting back to its default, which is also what the bare URL gives.
+    reset: () => {
+      lastB.current = DEFAULT_B;
+      setQ(null);
+    },
   };
   return { view, set };
 }
