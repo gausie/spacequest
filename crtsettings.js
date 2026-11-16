@@ -1,5 +1,5 @@
 import { frameOf } from "./data.js";
-// CRT tweaks shared by the viewer and the lab. Overrides are per preset because the
+// CRT tweaks, once set in the CRT lab (now gone); saved ones still apply. Overrides are per preset because the
 // presets differ by monitor and size; the tube (curvature, corners, vignette) is global.
 const KEY = "sq-crt";
 

@@ -1,162 +1,154 @@
-/* A Turbo Vision style text-mode desktop in the 16 RGBI colours. */
-@font-face { font-family: "IBM VGA 4:3"; src: url(fonts/ibm-vga-4x3.ttf) format("truetype"); font-display: block; }
+/* The AGI interpreter's own look: status line, parser, message boxes and menus, in its 16 colours
+   and the PC BIOS 8x8 font. Sizes are in AGI pixels on a 4:3 screen: --u wide, --v tall. */
+@font-face { font-family: "AGI PC 8x8"; src: url(fonts/agi-pc-8x8.ttf) format("truetype"); font-display: block; }
+@font-face { font-family: "IBM VGA 9x16"; src: url(fonts/ibm-vga-9x16.ttf) format("truetype"); font-display: block; }
 :root {
   --e0: #000000; --e1: #0000AA; --e2: #00AA00; --e3: #00AAAA; --e4: #AA0000; --e7: #AAAAAA;
   --e8: #555555; --e10: #55FF55; --e11: #55FFFF; --e12: #FF5555; --e14: #FFFF55; --e15: #FFFFFF;
-  --vt: "IBM VGA 4:3", "Lucida Console", "Courier New", monospace;
-  --f: 16px; --bd: 6px; --gap: 16px;
-  --sh: 14px 12px 0 rgba(0, 0, 0, .82);
-  /* cursor.js swaps in the pixel arrow; these are the fallbacks until then */
+  --vt: "AGI PC 8x8", "Courier New", monospace;
+  /* One text cell is 8x8 AGI pixels; font-size is its height. */
+  --F: 24px; --v: calc(var(--F) / 8); --u: calc(var(--F) / 9.6); --ch: calc(var(--u) * 8);
+  --gap: var(--F);
   --cur-arrow: default; --cur-point: pointer;
   color-scheme: dark;
 }
+/* Display > Readable font: the PC's VGA text font (9x16, stretched for 4:3 so a cell is 1.35 em
+   tall), the same family as AGI's 8x8 but finer. One of its cells fills one of our text rows. */
+body.plain { --vt: "IBM VGA 9x16", "Courier New", monospace; font-size: calc(var(--F) / 1.35); line-height: 1.35; }
+body.plain .statusline, body.plain .status, body.plain .menubar, body.plain .parser { align-items: center; }
+body.plain .msgbox { line-height: 1.35; }
+/* Arrows, marks and the > prompt stay in the 8x8 font: they're the interface, not the reading. */
+body.plain .vscroll, body.plain .parser label, body.plain .handle button, body.plain .scene::before, body.plain .thumb small::before, body.plain .dd-item .mk { font-family: "AGI PC 8x8", monospace; font-size: var(--F); line-height: 1; -webkit-font-smoothing: none; }
+@media (max-height: 860px), (max-width: 1300px) { :root { --F: 20px; } }
+@media (max-width: 700px) { :root { --F: 16px; } }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 html, body { margin: 0; height: 100%; }
 body {
   overflow: hidden; display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
-  font: 400 var(--f)/1.35 var(--vt); color: var(--e15);
-  background: var(--e1) radial-gradient(var(--e7) 0.9px, transparent 1.1px) 0 0 / 4px 4px;
-  -webkit-font-smoothing: none;
+  font: 400 var(--F)/1 var(--vt); color: var(--e15); background: var(--e0);
+  -webkit-font-smoothing: none; font-smooth: never;
 }
 html, body { cursor: var(--cur-arrow); }
 button, a { cursor: var(--cur-point); }
-button { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: inherit; }
-:focus-visible { outline: 2px solid var(--e14); outline-offset: 2px; }
-.k { color: var(--e4); }
-a { color: var(--e11); }
+button, input, select { font: inherit; color: inherit; background: none; border: 0; padding: 0; text-align: inherit; border-radius: 0; }
+:focus-visible { outline: var(--u) dotted currentColor; outline-offset: 1px; }
+a { color: var(--e1); }
+p { margin: 0 0 var(--F); }
 
-.menubar, .status { background: var(--e7); color: var(--e0); display: flex; align-items: center; gap: 22px; padding: 2px 16px; white-space: nowrap; overflow: hidden; min-width: 0; z-index: 5; }
-.menubar { padding-top: calc(env(safe-area-inset-top, 0px) + 2px); }
-.status { padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); gap: 21px; }
-.menu-btn { padding: 0 6px; margin: 0 -6px; }
-.menu-btn[aria-pressed="true"] { background: var(--e2); }
-.menu-title[aria-expanded="true"] { background: var(--e0); color: var(--e15); }
-.right { margin-left: auto; overflow: hidden; text-overflow: ellipsis; }
+/* Status line / menu bar: one white text row across the top. */
+.statusline { position: relative; z-index: 5; background: var(--e15); color: var(--e0); height: calc(var(--F) + var(--v)); white-space: nowrap; padding-top: env(safe-area-inset-top, 0px); }
+/* One pixel row above the text: the 8x8 capitals start on the cell's top row and look clipped against the edge. */
+.status, .menubar { display: flex; height: calc(var(--F) + var(--v)); padding: var(--v) var(--ch) 0; }
+.status { justify-content: space-between; gap: calc(var(--ch) * 2); }
+.status span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-left { display: flex; gap: var(--ch); min-width: 0; }
+/* One text cell, like the glyph it is. */
+.logo { width: var(--ch); height: var(--F); flex: none; fill: currentColor; shape-rendering: crispEdges; display: block; }
+.mtitle .logo { display: inline-block; vertical-align: top; }
+.menubar { display: none; gap: var(--ch); }
+.statusline.menu .status { display: none; }
+.statusline.menu .menubar { display: flex; }
+/* The open title is inverted over its own text only, one space between titles, as in AGI. */
+.mtitle { padding: var(--v) 0 0; margin: calc(-1 * var(--v)) 0 0; }
+.mtitle[aria-expanded="true"] { background: var(--e0); color: var(--e15); }
 
-/* Pull-down menus: a grey box with a single-line frame inset from its edge, hotkeys in red. */
-.dropdown { position: fixed; z-index: 40; min-width: 234px; background: var(--e7); color: var(--e0); padding: 9px 11px; box-shadow: var(--sh); }
-.dropdown::before { content: ""; position: absolute; inset: 4px; border: 2px solid var(--e0); pointer-events: none; }
-.dd-item { display: grid; grid-template-columns: 2ch minmax(0, 1fr) auto; column-gap: 18px; width: 100%; padding: 0 7px; white-space: nowrap; color: var(--e0); }
+/* AGI's frame: white box, red lines inset one pixel at the sides (two thick) and half a row at
+   the top and bottom, as GfxMgr::drawBox draws it for EGA. */
+.box { position: relative; background: var(--e15); color: var(--e0); padding: calc(var(--v) * 5) calc(var(--u) * 7); min-width: 0; min-height: 0; }
+.box::before { content: ""; position: absolute; pointer-events: none; inset: calc(var(--v) / 2) var(--u); border: solid var(--e4); border-width: calc(var(--v) / 2) var(--u); }
+/* Square scrollbars in the box's colours: a black bar on white, one AGI pixel row from the frame. */
+.box .scroll::-webkit-scrollbar { width: calc(var(--u) * 3); height: calc(var(--v) * 2); background: var(--e15); }
+.box .scroll::-webkit-scrollbar-thumb { background: var(--e0); border-radius: 0; }
+.box .scroll::-webkit-scrollbar-track { background: var(--e15); }
+.box .scroll::-webkit-scrollbar-corner { background: var(--e15); }
+@supports not selector(::-webkit-scrollbar) { .box .scroll { scrollbar-color: var(--e0) var(--e15); } }
+.intro { margin: 0 0 var(--F); }
+.scroll { overflow: auto; }
+
+/* Pull-down menus: the same frame in black, the open item inverted. */
+.dropdown { position: fixed; z-index: 40; min-width: calc(var(--ch) * 16); background: var(--e15); color: var(--e0); padding: calc(var(--v) * 4) calc(var(--u) * 4); max-height: calc(100vh - var(--F) * 2); overflow: auto; }
+.dropdown::before { content: ""; position: absolute; pointer-events: none; inset: calc(var(--v) / 2) var(--u); border: solid var(--e0); border-width: calc(var(--v) / 2) var(--u); }
+.dd-item { display: flex; justify-content: space-between; gap: calc(var(--ch) * 2); width: 100%; padding: var(--v) var(--ch) 0; white-space: nowrap; height: calc(var(--F) + var(--v)); }
+.dd-item .mk { display: inline-block; width: var(--ch); }
 .dd-item:hover, .dd-item:focus { background: var(--e0); color: var(--e15); outline: none; }
-.dd-item:hover .k, .dd-item:focus .k { color: var(--e12); }
 .dd-item[aria-disabled="true"], .dd-item[aria-disabled="true"]:hover { background: none; color: var(--e8); cursor: var(--cur-arrow); }
-.dd-item[aria-disabled="true"] .k { color: inherit; }
-.dd-item .ms { text-align: right; }
-.dd-sep { border-top: 2px solid var(--e0); margin: 5px -7px; }
-/* Status hints give way in order as the bar narrows; the counts on the right go last. */
-@media (max-width: 1300px) { .status .p3 { display: none; } }
-@media (max-width: 900px) { .status .p2 { display: none; } }
+.dd-sep { height: var(--F); display: flex; align-items: center; padding: 0 var(--ch); }
+.dd-sep::after { content: ""; flex: 1; border-top: var(--v) dotted var(--e8); }
 
+/* Parser line: ">" and a block cursor on black. */
+.parser { display: flex; height: calc(var(--F) * 2); align-items: center; padding: 0 var(--ch) env(safe-area-inset-bottom, 0px); gap: 0; }
+.parser input { flex: 1; min-width: 0; height: var(--F); outline: none; caret-color: var(--e15); caret-shape: underscore; text-transform: none; }
 
 .desk { position: relative; min-height: 0; overflow: hidden; }
-.view { position: absolute; inset: 0; display: none; padding: 14px 26px 18px 22px; }
-.view.on { display: grid; }
-.win { position: relative; background: var(--e1); border: var(--bd) double var(--e15); padding: 14px 14px 10px; box-shadow: var(--sh); min-width: 0; min-height: 0; }
-.win.grey { background: var(--e7); color: var(--e0); }
-.win.teal { background: var(--e3); color: var(--e0); }
-.wt { position: absolute; top: -0.68em; left: 50%; transform: translateX(-50%); padding: 0 8px; background: inherit; white-space: nowrap; color: var(--e15); max-width: 90%; overflow: hidden; text-overflow: ellipsis; }
-.win.grey .wt { color: var(--e0); }
-.close { position: absolute; top: -0.68em; left: 10px; padding: 0 4px; background: inherit; color: var(--e15); }
-.win.grey .close { color: var(--e0); }
-.close b { color: var(--e10); font-weight: 400; } .win.grey .close b { color: var(--e2); }
-.scroll { overflow: auto; scrollbar-color: var(--e3) var(--e1); }
-.win.grey .scroll { scrollbar-color: var(--e1) var(--e7); }
-
-.btn { background: var(--e2); color: var(--e0); padding: 1px 12px 0; box-shadow: 8px 6px 0 var(--e0); white-space: nowrap; }
-.btn:hover { color: var(--e15); }
-.btn[aria-pressed="true"] { background: var(--e10); }
-.btn .k { color: var(--e15); } .btn[aria-pressed="true"] .k { color: var(--e4); }
-.btn:active { transform: translate(4px, 3px); box-shadow: 4px 3px 0 var(--e0); }
-.btns { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+.view { position: absolute; inset: 0; display: grid; padding: var(--F) calc(var(--ch) * 2); }
 
 /* viewer: scenes | screen, versions underneath */
-.viewer { grid-template-columns: 220px minmax(0, min(960px, max(600px, (100vh - 372px) * 4 / 3))); grid-template-rows: minmax(0, auto) auto; gap: var(--gap) 30px; justify-content: center; align-content: center; }
-.scenes { display: flex; flex-direction: column; padding: 14px 0 10px; }
+.viewer { grid-template-columns: calc(var(--ch) * 24) minmax(0, min(1040px, max(600px, (100vh - var(--F) * 15) * 4 / 3))); grid-template-rows: minmax(0, auto) auto; gap: var(--gap) calc(var(--ch) * 2); justify-content: center; align-content: center; }
+.scenes { display: flex; flex-direction: column; }
 .scenes .scroll { flex: 1; min-height: 0; }
-.scene { display: block; width: 100%; padding: 0 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.scene .n { color: var(--e1); }
-.scene[aria-current="true"] { background: var(--e0); color: var(--e15); }
-.scene[aria-current="true"] .n { color: var(--e14); }
-.scene:hover:not([aria-current="true"]) { background: var(--e11); }
+.scene { display: flex; width: 100%; white-space: nowrap; height: var(--F); }
+.scene::before { content: ""; flex: 0 0 calc(var(--ch) * 2); }
+.scene[aria-current="true"]::before { content: "→"; }
+.scene span { overflow: hidden; text-overflow: ellipsis; }
+/* Hover and keyboard focus invert the row, as AGI's menus highlight an item. */
+.scene:hover, .scene:focus-visible { background: var(--e0); color: var(--e15); outline: none; }
 
-.screenwin { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; }
-.cap { display: flex; justify-content: space-between; gap: 12px; white-space: nowrap; background: var(--e15); color: var(--e1); padding: 0 6px; }
-.cap #caption { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.frame { overflow: auto; background: #000; align-self: center; max-width: 100%; min-height: 0; }
+.screenwin { display: flex; flex-direction: column; gap: var(--F); }
+.frame { overflow: auto; background: #000; align-self: center; max-width: 100%; flex: none; scrollbar-color: var(--e8) var(--e0); }
 /* fitScreen() in app.js sizes the frame and screen in pixels. */
 .screen { position: relative; aspect-ratio: 4 / 3; }
-.layer { position: absolute; inset: 0; }
 /* The screen is always 4:3; a picture that isn't (a Mac's square pixels) is letterboxed on black. */
-.layer { background: var(--e0); }
+.layer { position: absolute; inset: 0; background: var(--e0); }
 .layer img, .layer canvas { position: absolute; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; object-fit: contain; }
 .layer canvas { display: none; }
 .crt .layer canvas { display: block; } .crt .layer img { visibility: hidden; }
 #layerB { display: none; }
 .compare #layerB { display: block; clip-path: inset(0 0 0 var(--split, 50%)); }
-.handle { position: absolute; top: 0; bottom: 0; left: var(--split, 50%); width: 2px; background: var(--e15); transform: translateX(-1px); }
-.handle button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--e15); color: var(--e1); padding: 0 4px; cursor: ew-resize; touch-action: none; }
+.handle { position: absolute; top: 0; bottom: 0; left: var(--split, 50%); width: var(--u); background: var(--e15); transform: translateX(-50%); }
+.handle button { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: var(--e15); color: var(--e0); padding: 0 var(--u); height: var(--F); cursor: ew-resize; touch-action: none; }
 .drop { position: absolute; inset: 0; display: none; grid-template-columns: 1fr 1fr; pointer-events: none; }
-.drop span { display: grid; place-items: center; text-align: center; background: #0000aa99; border: 3px dashed var(--e14); color: var(--e14); }
+.drop span { display: grid; place-items: center; text-align: center; line-height: 1.2; background: #000000aa; border: var(--u) dashed var(--e15); color: var(--e15); }
 .dragging .drop { display: grid; }
-.sfoot { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; padding: 4px 0 8px; }
 
-.vers { grid-column: 1 / -1; }
-.vgrid { display: grid; grid-auto-flow: column; grid-auto-columns: 132px; gap: 10px; padding: 6px 2px 10px; }
-.thumb { display: flex; flex-direction: column; gap: 3px; padding: 4px; }
+.vers { grid-column: 1 / -1; padding: calc(var(--v) * 4) calc(var(--u) * 3 + var(--ch) * 2.5) calc(var(--v) * 3); }
+.vgrid { display: grid; grid-auto-flow: column; grid-auto-columns: calc(var(--ch) * 15.5); gap: var(--ch); }
+.thumb { display: flex; flex-direction: column; }
+.thumb img + small { margin-top: var(--v); }  /* label lines touch, so their inversion is one block */
 .thumb img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; image-rendering: pixelated; background: var(--e0); display: block; }
-.thumb small { line-height: 1.1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.thumb .yr { color: var(--e1); }
-.thumb.a { background: var(--e0); color: var(--e15); } .thumb.a .yr { color: var(--e14); }
-.thumb.b { background: var(--e1); color: var(--e15); } .thumb.b .yr { color: var(--e11); }
+.thumb small { font-size: inherit; height: var(--F); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Same rules as the scene list: a mark in the gutter for what's on screen (→, or A and B when
+   comparing), the label inverted under the pointer or keyboard. The picture never changes. */
+.thumb small { position: relative; padding-left: calc(var(--ch) * 2); }
+.thumb small:last-child::before { content: attr(data-mark); position: absolute; left: 0; }
+.thumb:hover small, .thumb:focus-visible small { background: var(--e0); color: var(--e15); }
+.thumb:focus-visible { outline: none; }
+
+/* No scrollbar: ◄ ► cells inside the frame, level with the pictures, when there's more that way. */
+.vers .scroll { scrollbar-width: none; }
+.vers .scroll::-webkit-scrollbar { display: none; }
+/* A cell two characters wide and two rows tall around the glyph; the strip's side padding keeps clear of it. */
+.vscroll { position: absolute; z-index: 1; top: calc(var(--v) * 4 + var(--ch) * 15.5 * 3 / 8); transform: translateY(-50%); width: calc(var(--ch) * 2); height: calc(var(--F) * 2); display: grid; place-items: center; background: var(--e15); color: var(--e0); }
+/* Inside the frame (it's 2 pixels in from the edge) so the red line stays whole. */
+.vscroll[data-dir="-1"] { left: calc(var(--u) * 3); } .vscroll[data-dir="1"] { right: calc(var(--u) * 3); }
+.vscroll:hover, .vscroll:focus-visible { background: var(--e0); color: var(--e15); outline: none; }
 .thumb.missing img { opacity: .5; }
 
-.fullwin { display: flex; flex-direction: column; height: 100%; max-width: 1400px; width: 100%; justify-self: center; }
-.fullwin > .scroll { flex: 1; min-height: 0; }
-.wall { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; padding: 6px; }
-.wall button { display: flex; flex-direction: column; gap: 4px; }
-.wall img { width: 100%; aspect-ratio: 4 / 3; object-fit: contain; image-rendering: pixelated; background: var(--e0); display: block; }
-.wall button:hover span { background: var(--e0); color: var(--e15); }
-.about .scroll { max-width: 80ch; }
-.about .chk b { color: var(--e10); font-weight: 400; }
-.about .credit { color: var(--e7); }
+/* Message box over everything, centred like AGI's print(). */
+.msgwrap { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: var(--F); }
+/* Sized to its text up to 36 characters, as AGI wraps a message; focused only so Enter closes it. */
+.msgbox { width: fit-content; max-width: min(calc(var(--ch) * 36 + var(--u) * 14), 100%); max-height: 100%; overflow: auto; line-height: 1; outline: none; }
+.msgbox p:last-child, .msgbox dl:last-child { margin-bottom: 0; }
+.keys { display: grid; grid-template-columns: auto 1fr; gap: 0 var(--ch); margin: 0 0 var(--F); }
+.keys dt { color: var(--e4); } .keys dd { margin: 0; }
 
 @media (max-width: 1100px) {
   body { overflow: auto; }
   .desk { overflow: visible; }
-  .view { position: static; padding: 14px 16px; }
+  .view { position: static; padding: var(--F) var(--ch); }
   .viewer { grid-template-columns: minmax(0, 1fr); }
-  .scenes .scroll { display: flex; overflow-x: auto; }
+  .scenes .intro { display: none; }
+  .scenes .scroll { display: flex; overflow-x: auto; gap: var(--ch); }
   .scene { width: auto; }
-  .menubar .right { display: none; }
+  .status #stRight { display: none; }
 }
-
-/* floating windows */
-.freeview { display: none; }
-.freeview.on { display: block; }
-.win.free { position: absolute; width: var(--w, 40%); min-width: 260px; }
-.win.free p { margin: 0 0 10px; }
-.tbar { position: absolute; left: 0; right: 0; top: calc(-1 * var(--bd) - 0.7em); height: calc(1.4em + var(--bd)); cursor: grab; }
-.moving, .moving * { cursor: grabbing !important; user-select: none; }
-button.close { z-index: 1; }
-.chk { white-space: nowrap; }
-
-/* CRT lab */
-.lab { grid-template-columns: 200px minmax(0, 760px) minmax(260px, 340px); gap: var(--gap) 30px; justify-content: center; align-content: center; }
-.labmachine, .labset { align-self: stretch; display: flex; flex-direction: column; }
-.labmachine { padding: 14px 0 10px; }
-.labmachine .scroll, .labset .scroll { flex: 1; min-height: 0; }
-#labScreen { cursor: grab; }
-#labCanvas { position: absolute; inset: 0; width: 100%; height: 100%; }
-#labScreen .handle { left: auto; }
-.msg { position: absolute; inset: 0; display: grid; place-items: center; color: var(--e14); }
-.plan dl { display: grid; grid-template-columns: auto 1fr; gap: 0 12px; margin: 0; }
-.plan dt { color: var(--e11); } .plan dd { margin: 0; }
-.labset h3 { font: inherit; color: var(--e1); margin: 10px 0 2px; }
-.sl { display: grid; grid-template-columns: 1fr 90px 5ch; gap: 8px; align-items: center; }
-.sl span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.sl.changed span { color: var(--e4); }
-.sl input { width: 100%; accent-color: var(--e1); }
-.sl output { text-align: right; }
-.sl select { grid-column: 2 / -1; font: inherit; background: var(--e1); color: var(--e15); border: 0; }
-@media (max-width: 1100px) { .lab { grid-template-columns: minmax(0, 1fr); } .win.free { position: relative; left: auto !important; top: auto !important; width: auto; margin-bottom: 24px; } .freeview.on { display: grid; } }

@@ -2,7 +2,7 @@
 
 Twelve moments from Space Quest I, framed identically across every release. Static site, no build step.
 
-GPL v2 or later (see `LICENSE`). `crt.js` is The Paninos off-line's GPL port of DOSBox Staging's CRT shaders, taken from monkeyisland.pages.dev; notices in `licenses/`. The font is PxPlus IBM VGA 9x16 by VileR, CC BY-SA 4.0.
+GPL v2 or later (see `LICENSE`). `crt.js` is The Paninos off-line's GPL port of DOSBox Staging's CRT shaders, taken from monkeyisland.pages.dev; notices in `licenses/`. `fonts/agi-pc-8x8.ttf` is the IBM PC BIOS 8x8 font that AGI used, built by `tools/mkfont.py` from ScummVM's `graphics/fonts/dosfont.cpp` (`python3 tools/mkfont.py dosfont.cpp fonts/agi-pc-8x8.ttf`, needs fonttools). The readable font is PxPlus IBM VGA 9x16 by VileR, CC BY-SA 4.0.
 
     python3 -m http.server 8000   # WebGL needs http://, not file://
 

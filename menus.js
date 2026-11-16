@@ -1,56 +1,77 @@
-// Turbo Vision pull-down menus for the menu bar. Each menu is a function returning its items, so
+// AGI's menu bar. It takes the status line's place while it's in use: hovering the line, clicking
+// it, or Esc, which is how the game opened it. Each menu is a function returning its items so
 // marks and disabled states are read fresh every time it opens.
-//   { label, hot, keys, radio, disabled, run }  or  "-" for a separator
+//   { label, keys, radio, check, disabled, run }  or  "-" for a separator
+// radio: on for the one chosen of a group (•); check: on for a toggle that's on (■).
+const line = document.getElementById("statusline"), bar = document.getElementById("menubar");
 const box = document.getElementById("dropdown");
-let open = null, menus = {};
+let defs = [], open = -1, hovering = false;
 
-function render(items) {
-  box.replaceChildren(...items.map(it => {
+const titles = () => [...bar.querySelectorAll(".mtitle")];
+const items = () => [...box.querySelectorAll(".dd-item:not([aria-disabled])")];
+
+function sync() {
+  line.classList.toggle("menu", hovering || open >= 0);
+  titles().forEach((t, i) => t.setAttribute("aria-expanded", i === open));
+}
+
+function render(list) {
+  box.replaceChildren(...list.map(it => {
     if (it === "-") { const s = document.createElement("div"); s.className = "dd-sep"; return s; }
     const b = document.createElement("button");
     b.className = "dd-item"; b.setAttribute("role", "menuitem");
     if (it.disabled) b.setAttribute("aria-disabled", "true");
-    // Colour the hotkey letter the way the menu bar does: the first match, case-insensitive.
-    const i = it.hot ? it.label.toLowerCase().indexOf(it.hot.toLowerCase()) : -1;
-    const label = i < 0 ? it.label : `${it.label.slice(0, i)}<span class="k">${it.label[i]}</span>${it.label.slice(i + 1)}`;
-    b.innerHTML = `<span>${it.radio ? "•" : ""}</span><span>${label}</span><span class="ms">${it.keys || ""}</span>`;
+    b.innerHTML = `<span><span class="mk">${it.radio ? "•" : it.check ? "■" : ""}</span>${it.label}</span><span>${it.keys || ""}</span>`;
     b.onclick = () => { if (it.disabled) return; close(); it.run(); };
-    b.dataset.hot = (it.hot || "").toLowerCase();
+    b.onpointerenter = () => b.focus();
     return b;
   }));
 }
 
-function show(name, title) {
-  open = name;
-  render(menus[name]());
-  document.querySelectorAll(".menu-title").forEach(t => t.setAttribute("aria-expanded", t === title));
-  const r = title.getBoundingClientRect();
+function show(i, focusFirst = true) {
+  open = (i + defs.length) % defs.length; sync();
+  render(defs[open].items());
+  const r = titles()[open].getBoundingClientRect();
   box.hidden = false;
   box.style.top = `${r.bottom}px`;
   // Keep the box on screen when the title is near the right edge.
   box.style.left = `${Math.max(0, Math.min(r.left, innerWidth - box.offsetWidth))}px`;
-  box.querySelector(".dd-item:not([aria-disabled])")?.focus();
+  if (focusFirst) items()[0]?.focus();
 }
 
 export function close() {
-  if (!open) return false;
-  open = null; box.hidden = true;
-  document.querySelectorAll(".menu-title").forEach(t => t.setAttribute("aria-expanded", "false"));
+  if (open < 0) return false;
+  open = -1; box.hidden = true; sync();
   return true;
 }
 
-export function initMenus(defs) {
-  menus = defs;
-  document.querySelectorAll(".menu-title").forEach(t => {
-    t.onclick = e => { e.stopPropagation(); open === t.dataset.menu ? close() : show(t.dataset.menu, t); };
-  });
-  document.addEventListener("pointerdown", e => { if (!e.target.closest("#dropdown, .menu-title")) close(); });
+// Esc from the page: open the first menu, as AGI does.
+export function openMenu() { show(0); }
+
+export function initMenus(list) {
+  defs = list;
+  bar.replaceChildren(...defs.map((d, i) => {
+    const t = document.createElement("button");
+    t.className = "mtitle"; t.setAttribute("aria-haspopup", "menu");
+    // A title can be a node (the Sierra logo) instead of text; the label still names it.
+    if (d.icon) { t.append(d.icon); t.setAttribute("aria-label", d.title); } else t.textContent = d.title;
+    t.onclick = e => { e.stopPropagation(); open === i ? close() : show(i); };
+    t.onpointerenter = () => { if (open >= 0 && open !== i) show(i, false); };
+    return t;
+  }));
+  line.onpointerenter = () => { hovering = true; sync(); };
+  line.onpointerleave = () => { hovering = false; sync(); };
+  // A tap on the status line (no hover on touch screens) opens the first menu.
+  line.onclick = e => { if (!e.target.closest(".mtitle")) show(0); };
+  document.addEventListener("pointerdown", e => { if (!e.target.closest("#dropdown, #statusline")) close(); });
   box.addEventListener("keydown", e => {
-    const items = [...box.querySelectorAll(".dd-item:not([aria-disabled])")], i = items.indexOf(document.activeElement);
-    if (e.key === "ArrowDown") items[(i + 1) % items.length].focus();
-    else if (e.key === "ArrowUp") items[(i - 1 + items.length) % items.length].focus();
+    const its = items(), i = its.indexOf(document.activeElement);
+    if (e.key === "ArrowDown") its[(i + 1) % its.length]?.focus();
+    else if (e.key === "ArrowUp") its[(i - 1 + its.length) % its.length]?.focus();
+    else if (e.key === "ArrowRight") show(open + 1);
+    else if (e.key === "ArrowLeft") show(open - 1);
     else if (e.key === "Escape") close();
-    else { const hit = items.find(b => b.dataset.hot && b.dataset.hot === e.key.toLowerCase()); if (!hit) return; hit.click(); }
+    else return;
     e.preventDefault(); e.stopPropagation();
   });
 }

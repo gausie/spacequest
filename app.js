@@ -1,13 +1,12 @@
 import { VERSIONS, SCENES, frameCanvas } from "./data.js";
 import { setShot, isMissing } from "./shots.js";
 import { crtParams } from "./crtsettings.js";
-import { initLab, openLab } from "./lab.js";
-import { initWindows, showAll } from "./windows.js";
 import { installCursor } from "./cursor.js";
-import { initMenus, close as closeMenu } from "./menus.js";
+import { initMenus, openMenu, close as closeMenu } from "./menus.js";
+import { parse } from "./parser.js";
 
 const $ = s => document.querySelector(s);
-const state = { view: "viewer", scene: 0, a: 2, b: 8, zoom: 1, crt: false, compare: false, split: 50 };
+const state = { scene: 0, a: 2, b: 8, zoom: 1, crt: false, compare: false, split: 50 };
 const crtOK = window.CRT?.supported();
 
 /* ---------- CRT ---------- */
@@ -36,12 +35,26 @@ function loadLayer(layer, vi) {
   if (layer.img.complete && layer.img.naturalWidth) drawCRT(layer);
 }
 
+/* ---------- message box ---------- */
+function msg(html) {
+  $("#msgbox").innerHTML = html;
+  $("#msgwrap").hidden = false;
+  $("#msgbox").focus();
+}
+const msgOpen = () => !$("#msgwrap").hidden;
+function closeMsg() { $("#msgwrap").hidden = true; $("#cmd").focus(); }
+$("#msgbox").tabIndex = -1;
+// Like AGI, any click or Enter/Esc puts the box away; links inside still work.
+$("#msgwrap").onclick = e => { if (!e.target.closest("a")) closeMsg(); };
+const about = () => msg($("#t-about").innerHTML);
+const help = () => msg($("#t-help").innerHTML);
+
 /* ---------- rendering ---------- */
 function renderScenes() {
   $("#scenes").replaceChildren(...SCENES.map((s, i) => {
     const b = document.createElement("button");
     b.className = "scene";
-    b.innerHTML = `<span class="n">${String(i + 1).padStart(2, "0")}</span> ${s.name}`;
+    b.innerHTML = `<span>${s.name}</span>`;
     b.setAttribute("aria-current", i === state.scene);
     b.onclick = () => { state.scene = i; update(); };
     return b;
@@ -57,7 +70,8 @@ function renderThumbs() {
     b.classList.toggle("a", i === state.a);
     b.classList.toggle("b", state.compare && i === state.b);
     b.classList.toggle("missing", isMissing(v, s));
-    b.innerHTML = `<img alt="" draggable="false"><small class="yr">${v.year} · ${v.engine}${v.approx ? " *" : ""}</small><small>${v.name}</small>`;
+    const mark = i === state.a ? (state.compare ? "A" : "→") : state.compare && i === state.b ? "B" : "";
+    b.innerHTML = `<img alt="" draggable="false"><small>${v.year} ${v.engine}${v.approx ? " *" : ""}</small><small data-mark="${mark}">${v.name}</small>`;
     setShot(b.querySelector("img"), v, s);
     b.draggable = true;
     b.ondragstart = e => { e.dataTransfer.setData("text/plain", i); document.body.classList.add("dragging"); };
@@ -67,60 +81,54 @@ function renderThumbs() {
   }));
 }
 
+// The ◄ ► cells show only when the strip can scroll that way; each click moves about a box-width.
+const strip = $(".vers .scroll"), scrollers = document.querySelectorAll(".vscroll");
+function updateScrollers() {
+  const end = strip.scrollWidth - strip.clientWidth;
+  scrollers.forEach(b => { b.hidden = +b.dataset.dir < 0 ? strip.scrollLeft <= 1 : strip.scrollLeft >= end - 1; });
+}
+scrollers.forEach(b => b.onclick = () => strip.scrollBy({ left: +b.dataset.dir * strip.clientWidth * 0.8, behavior: "smooth" }));
+strip.addEventListener("scroll", updateScrollers, { passive: true });
+
 // The screen at 1x is as big as the window allows: its column's width, or less when the
-// height runs out (the grid squeezes the frame, which then overflows by that much). Zoom
-// keeps the frame that size and scrolls a bigger screen inside it.
+// height runs out (the view's height less the versions box under it). Zoom keeps the frame
+// that size and scrolls a bigger screen inside it.
 function fitScreen() {
-  const f = $("#frame"), sc = $("#screen"), win = f.parentElement, cs = getComputedStyle(win);
-  if (!win.clientWidth) return;  // viewer hidden; measured again when it's shown
-  const w0 = Math.floor(win.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
-  f.style.width = sc.style.width = `${w0}px`; f.style.height = "";
-  const over = f.scrollHeight - f.clientHeight;
+  const f = $("#frame"), sc = $("#screen"), view = $("#v-viewer"), vs = getComputedStyle(view);
+  if (!f.parentElement.clientWidth) return;  // viewer hidden; measured again when it's shown
+  const w0 = f.parentElement.clientWidth;
+  // On narrow screens the page scrolls instead (the view isn't fixed to the window).
+  const h = vs.position === "absolute"
+    ? view.clientHeight - parseFloat(vs.paddingTop) - parseFloat(vs.paddingBottom) - $(".vers").offsetHeight - parseFloat(vs.rowGap)
+    : Infinity;
   // A multiple of 4 so the height is a whole number too: a half pixel brings back scrollbars.
-  const w = Math.floor((over > 0 ? (sc.offsetHeight - over) * 4 / 3 : w0) / 4) * 4;
+  const w = Math.floor(Math.min(w0, h * 4 / 3) / 4) * 4;
   f.style.width = `${w}px`; f.style.height = `${w * 3 / 4}px`;
   sc.style.width = `${w * state.zoom}px`;
 }
 
-function renderWall() {
-  const s = SCENES[state.scene];
-  $("#wallTitle").textContent = `The wall · ${s.name}`;
-  $("#wall").replaceChildren(...VERSIONS.map((v, i) => {
-    const b = document.createElement("button");
-    b.dataset.key = `${v.id}/${s.id}`;
-    b.innerHTML = `<img alt=""><span>${v.year} · ${v.engine} ${v.name}</span>`;
-    setShot(b.querySelector("img"), v, s);
-    b.onclick = () => { state.a = i; state.view = "viewer"; update(); };
-    return b;
-  }));
+// The status line: what you're looking at, where AGI had "Score:0 of 202 ... Sound:on".
+function statusText() {
+  const s = SCENES[state.scene], A = VERSIONS[state.a], B = VERSIONS[state.b];
+  const ver = v => `${v.engine} ${v.name}`;
+  return [`${s.name}`, state.compare ? `${ver(A)} │ ${ver(B)}` : `${ver(A)}, ${A.year}, ${A.native.join("x")}`];
 }
 
 function update() {
-  const s = SCENES[state.scene], A = VERSIONS[state.a], B = VERSIONS[state.b];
-  document.querySelectorAll(".view").forEach(v => v.classList.toggle("on", v.id === `v-${state.view}`));
-  document.querySelectorAll(".menu-btn").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === state.view));
+  const A = VERSIONS[state.a];
   document.body.classList.toggle("crt", state.crt && crtOK);
   document.body.classList.toggle("compare", state.compare);
   fitScreen();
   $("#screen").style.setProperty("--split", `${state.split}%`);
   $("#handle").hidden = !state.compare;
-  $("#bSwap").hidden = !state.compare;
-  $("#bCompare").setAttribute("aria-pressed", state.compare);
-  $("#bCrt").setAttribute("aria-pressed", state.crt);
-  $("#bCrt").disabled = !crtOK;
-  document.querySelectorAll("[data-zoom]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.zoom === state.zoom));
-  $("#caption").textContent = state.compare
-    ? `${s.name} · A: ${A.engine} ${A.name} │ B: ${B.engine} ${B.name}`
-    : `${s.name} · ${A.engine} ${A.name}, ${A.year} · ${A.native.join("×")}${A.approx ? ` · ⚠ ${A.approx}` : ""}`;
-  if (state.view === "viewer") {
-    loadLayer(layers[0], state.a);
-    if (state.compare) loadLayer(layers[1], state.b);
-    renderScenes(); renderThumbs();
-    document.querySelector(".thumb.a")?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }
-  if (state.view === "wall") renderWall();
-  if (state.view === "lab") openLab(state.a, state.scene);
-  if (state.view === "about") showAll($("#v-about"));
+  const [l, r] = statusText();
+  $("#stLeft").textContent = l; $("#stRight").textContent = r + (A.approx ? " *" : "");
+  loadLayer(layers[0], state.a);
+  if (state.compare) loadLayer(layers[1], state.b);
+  renderScenes(); renderThumbs();
+  document.querySelector(".thumb.a")?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  updateScrollers();
+  document.querySelector(".scene[aria-current=true]")?.scrollIntoView({ block: "nearest" });
   writeHash();
 }
 
@@ -129,7 +137,6 @@ function writeHash() {
   if (state.compare) p.set("b", VERSIONS[state.b].id);
   if (state.crt) p.set("crt", "1");
   if (state.zoom !== 1) p.set("z", state.zoom);
-  if (state.view !== "viewer") p.set("v", state.view);
   history.replaceState(null, "", `#${p}`);
 }
 
@@ -140,31 +147,63 @@ function readHash() {
   const bi = VERSIONS.findIndex(v => v.id === p.get("b")); if (bi >= 0) { state.b = bi; state.compare = true; }
   state.crt = p.get("crt") === "1";
   if ([1, 2, 4].includes(+p.get("z"))) state.zoom = +p.get("z");
-  if (["wall", "lab", "about"].includes(p.get("v"))) state.view = p.get("v");
+  if (p.get("v") === "about") about();
 }
 
-/* ---------- controls ---------- */
-document.querySelectorAll(".menu-btn[data-view]").forEach(b => b.onclick = () => { state.view = b.dataset.view; update(); });
+// The 8x8 font is the point, but not easy reading for everyone: a per-viewer choice.
+const plainFont = () => document.body.classList.contains("plain");
+function setPlainFont(on) {
+  document.body.classList.toggle("plain", on);
+  try { localStorage.setItem("sq-plain-font", on ? "1" : ""); } catch {}
+  fitScreen();
+}
+try { if (localStorage.getItem("sq-plain-font")) document.body.classList.add("plain"); } catch {}
 
-const nextZoom = () => ({ 1: 2, 2: 4, 4: 1 })[state.zoom];
-// The ≡ menu lists the views, with a mark on the current one.
-const VIEWS = [["viewer", "Viewer", "v"], ["wall", "The wall", "w"], ["lab", "CRT lab", "b"], ["about", "About", "a"]];
-initMenus({
-  views: () => VIEWS.map(([id, label, hot]) => ({
-    label, hot, keys: hot.toUpperCase(), radio: state.view === id,
-    disabled: id === "lab" && !crtOK, run: () => { state.view = id; update(); },
-  })),
-});
-$("#counts").textContent = `${VERSIONS.length} versions · ${SCENES.length} scenes · ${VERSIONS.length * SCENES.length} screens`;
-$("#bCompare").onclick = () => { state.compare = !state.compare; update(); };
-$("#bSwap").onclick = () => { [state.a, state.b] = [state.b, state.a]; update(); };
-$("#bCrt").onclick = () => { state.crt = !state.crt; update(); };
-document.querySelectorAll("[data-zoom]").forEach(b => b.onclick = () => { state.zoom = +b.dataset.zoom; update(); });
-$("#bLink").onclick = async () => {
-  const b = $("#bLink"), html = b.innerHTML;
-  try { await navigator.clipboard.writeText(location.href); b.textContent = "Copied"; }
-  catch { b.textContent = "Copy failed"; }
-  setTimeout(() => { b.innerHTML = html; }, 1200);
+/* ---------- actions (menus, parser and keys all go through these) ---------- */
+async function copyLink() {
+  try { await navigator.clipboard.writeText(location.href); msg("<p>The link to this view has been copied.</p>"); }
+  catch { msg(`<p>Couldn't copy the link. Here it is:</p><p>${location.href}</p>`); }
+}
+const act = {
+  scene: i => { state.scene = i; update(); },
+  version: i => { state.a = i; update(); },
+  compare: (i = null) => { if (i !== null) { state.b = i; state.compare = true; } else state.compare = !state.compare; update(); },
+  swap: () => { [state.a, state.b] = [state.b, state.a]; update(); },
+  crt: () => { if (!crtOK) return msg("<p>This browser has no WebGL2, so no CRT.</p>"); state.crt = !state.crt; update(); },
+  zoom: z => { state.zoom = z ?? ({ 1: 2, 2: 4, 4: 1 })[state.zoom]; update(); },
+  link: copyLink, about, help,
+  font: () => setPlainFont(!plainFont()),
+};
+
+const logo = () => $("#t-logo").content.firstElementChild.cloneNode(true);
+document.querySelector(".logo-slot").replaceWith(logo());
+initMenus([
+  { title: "Sierra", icon: logo(), items: () => [
+    { label: "About these versions", run: about },
+    { label: "Help", keys: "<F1>", run: help },
+  ] },
+  { title: "Special", items: () => [
+    { label: "Compare", keys: "<F2>", check: state.compare, run: () => act.compare() },
+    { label: "Swap A and B", keys: "<F3>", disabled: !state.compare, run: act.swap },
+    "-",
+    { label: "Copy link", keys: "<F9>", run: copyLink },
+  ] },
+  { title: "Display", items: () => [
+    ...[1, 2, 4].map(z => ({ label: `Zoom ${z}x`, radio: state.zoom === z, run: () => act.zoom(z) })),
+    { label: "CRT", keys: "<F4>", check: state.crt, disabled: !crtOK, run: act.crt },
+    "-",
+    { label: "Readable font", check: plainFont(), run: act.font },
+  ] },
+]);
+
+$("#parser").onsubmit = e => {
+  e.preventDefault();
+  const input = $("#cmd"), text = input.value;
+  input.value = "";
+  if (!text.trim()) return;
+  const r = parse(text, state);
+  if (r.error) return msg(`<p>${r.error}</p>`);
+  r.run(act);
 };
 
 const screen = $("#screen");
@@ -188,32 +227,35 @@ screen.ondrop = e => {
   update();
 };
 
+// Letters go to the parser, as in the game. Arrows browse, function keys do what the menus say.
+const FKEYS = { F1: help, F2: () => act.compare(), F3: () => state.compare && act.swap(), F4: act.crt, F9: copyLink };
 document.addEventListener("keydown", e => {
-  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("input, select, #dropdown")) return;
-  const n = VERSIONS.length, m = SCENES.length, k = e.key.toLowerCase();
-  if (k === "arrowright") state.a = (state.a + 1) % n;
-  else if (k === "arrowleft") state.a = (state.a - 1 + n) % n;
-  else if (k === "arrowdown") state.scene = (state.scene + 1) % m;
-  else if (k === "arrowup") state.scene = (state.scene - 1 + m) % m;
-  else if (k === "c") state.compare = !state.compare;
-  else if (k === "s") [state.a, state.b] = [state.b, state.a];
-  else if (k === "r") state.crt = !state.crt;
-  else if (k === "l") return $("#bLink").click();
-  else if (k === "z") state.zoom = nextZoom();
-  else if (k === "escape") { if (closeMenu() || state.view === "viewer") return; state.view = "viewer"; }
-  else if (["1", "2", "4"].includes(k)) state.zoom = +k;
-  else if (k === "v") state.view = "viewer";
-  else if (k === "w") state.view = "wall";
-  else if (k === "b") state.view = "lab";
-  else if (k === "a") state.view = "about";
-  else return;
+  if (msgOpen()) {
+    if (["Enter", "Escape", " "].includes(e.key)) { e.preventDefault(); closeMsg(); }
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey || e.target.closest("#dropdown")) return;
+  if (FKEYS[e.key]) { e.preventDefault(); return FKEYS[e.key](); }
+  if (e.key === "Escape") { e.preventDefault(); if (!closeMenu()) openMenu(); return; }
+  const cmd = $("#cmd"), typing = cmd.value !== "";
+  const n = VERSIONS.length, m = SCENES.length;
+  if (e.key === "ArrowDown") state.scene = (state.scene + 1) % m;
+  else if (e.key === "ArrowUp") state.scene = (state.scene - 1 + m) % m;
+  else if (e.key === "ArrowRight" && !typing) state.a = (state.a + 1) % n;
+  else if (e.key === "ArrowLeft" && !typing) state.a = (state.a - 1 + n) % n;
+  else {
+    // Anything typed lands in the parser, wherever the focus was.
+    if (e.key.length === 1 && document.activeElement !== cmd) cmd.focus();
+    return;
+  }
   e.preventDefault(); update();
 });
 
 let resizeTimer;
-window.addEventListener("resize", () => { fitScreen(); clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawCRT, 100); });
+window.addEventListener("resize", () => { fitScreen(); updateScrollers(); clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawCRT, 100); });
 
 installCursor();
-initWindows();
-if (crtOK) initLab(redrawCRT);
 readHash(); update();
+// The font changes the boxes' sizes, so fit again once it's in.
+document.fonts.ready.then(() => { fitScreen(); updateScrollers(); });
+$("#cmd").focus();
