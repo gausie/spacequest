@@ -1,0 +1,51 @@
+/* Styled after AGI's restore dialog. */
+.scenes {
+  composes: box from "./Box.module.css";
+  display: flex;
+  flex-direction: column;
+}
+.intro {
+  margin: 0 0 var(--F);
+}
+.list {
+  composes: scroll from "./Box.module.css";
+  flex: 1;
+  min-height: 0;
+}
+.scene {
+  display: flex;
+  width: 100%;
+  white-space: nowrap;
+  height: var(--F);
+}
+.scene::before {
+  content: "";
+  flex: 0 0 calc(var(--ch) * 2);
+}
+.scene[aria-current="true"]::before {
+  content: "→";
+}
+.scene span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Hover and keyboard focus invert the row, as AGI's menus highlight an item. */
+.scene:hover,
+.scene:focus-visible {
+  background: var(--e0);
+  color: var(--e15);
+  outline: none;
+}
+@media (max-width: 1100px) {
+  .intro {
+    display: none;
+  }
+  .list {
+    display: flex;
+    overflow-x: auto;
+    gap: var(--ch);
+  }
+  .scene {
+    width: auto;
+  }
+}

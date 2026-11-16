@@ -1,4 +1,4 @@
-# Usage: python3 mkfont.py <scummvm>/graphics/fonts/dosfont.cpp fonts/agi-pc-8x8.ttf  (needs fonttools)
+# Usage: python3 mkfont.py <scummvm>/graphics/fonts/dosfont.cpp src/assets/agi-pc-8x8.ttf  (needs fonttools)
 # Builds the PC BIOS 8x8 font (what PC AGI draws its text with) as a TTF with AGI's pixel
 # shape on a 4:3 screen: each pixel 1 wide x 1.2 tall. font-size = one 8-row cell.
 import re, sys

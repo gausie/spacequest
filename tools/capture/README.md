@@ -1,12 +1,12 @@
 # Capturing the screenshots
 
-Everything in `shots/` is produced by one command:
+Everything in `public/shots/` is produced by one command:
 
     tools/capture/capture_all.sh            # every version
     tools/capture/capture_all.sh sci-mac    # or just some
 
 It runs ScummVM headless in Docker, jumps to each scene's room with the debugger, grabs the
-window off a virtual X display and publishes the result to `shots/`. Your screen and
+window off a virtual X display and publishes the result to `public/shots/`. Your screen and
 keyboard aren't touched.
 
 ## Prerequisites
@@ -26,7 +26,7 @@ keyboard aren't touched.
 
   Downloads, disk images and installer leftovers live in `work/originals/` (gitignored).
 - Output goes to `work/cap/docker/` (gitignored): `raw/` straight from ScummVM, `final/` after
-  postprocessing; `process.sh` then writes `shots/`.
+  postprocessing; `process.sh` then writes `public/shots/`.
 
 ## scenes.json
 

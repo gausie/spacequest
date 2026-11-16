@@ -1,0 +1,19 @@
+/* ">" and a block cursor on black. */
+.parser {
+  display: flex;
+  height: calc(var(--F) * 2);
+  align-items: center;
+  padding: 0 var(--ch) env(safe-area-inset-bottom, 0px);
+}
+/* One space after the >, in whichever font is in use (1ch is a character of this element's font). */
+.prompt {
+  margin-right: 1ch;
+}
+.input {
+  flex: 1;
+  min-width: 0;
+  height: var(--F);
+  outline: none;
+  caret-color: var(--e15);
+  caret-shape: underscore;
+}

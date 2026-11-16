@@ -1,0 +1,18 @@
+.caption {
+  margin: 0 0 calc(var(--v) * 3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* 4:3, as large as fits under its caption in the window, pixels kept sharp. */
+.picture {
+  display: block;
+  width: min(
+    calc(100vw - var(--F) * 2 - var(--u) * 14 - var(--ch) * 1.5),
+    calc((100vh - var(--F) * 3 - var(--v) * 13) * 4 / 3)
+  );
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: var(--e0);
+}

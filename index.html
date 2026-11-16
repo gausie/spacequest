@@ -5,74 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Space Quest I versions</title>
 <meta name="theme-color" content="#000000">
-<link rel="stylesheet" href="style.css">
+<link rel="icon" href="/src/assets/sierra.svg" type="image/svg+xml">
 </head>
 <body class="vga">
-<!-- The AGI status line; it turns into the menu bar on hover, click or Esc, as Esc did in the game. -->
-<header class="statusline" id="statusline">
-  <!-- The Sierra logo: character 1 of SCI's system font (FONT.000), which SCI0 menu bars used as the first title. -->
-  <template id="t-logo"><svg class="logo" viewBox="0 0 8 8" preserveAspectRatio="none" aria-hidden="true"><rect x="2" y="0" width="4" height="1"/><rect x="1" y="1" width="6" height="1"/><rect x="0" y="2" width="3" height="1"/><rect x="5" y="2" width="3" height="1"/><rect x="0" y="3" width="3" height="1"/><rect x="6" y="3" width="2" height="1"/><rect x="0" y="4" width="2" height="1"/><rect x="4" y="4" width="1" height="1"/><rect x="7" y="4" width="1" height="1"/><rect x="0" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="7" y="5" width="1" height="1"/><rect x="5" y="6" width="1" height="1"/></svg></template>
-  <div class="status"><span class="st-left"><span class="logo-slot"></span><span id="stLeft"></span></span><span id="stRight"></span></div>
-  <nav class="menubar" id="menubar" aria-label="Menu"></nav>
-</header>
-<div class="dropdown" id="dropdown" role="menu" hidden></div>
-
-<main class="desk">
-  <section class="view viewer" id="v-viewer">
-    <nav class="box scenes" aria-label="Scenes">
-      <p class="intro">Use the arrow keys to select the scene you wish to see.</p>
-      <div class="scroll" id="scenes"></div>
-    </nav>
-
-    <section class="screenwin">
-      <div class="frame" id="frame">
-        <div class="screen" id="screen">
-          <div class="layer" id="layerA"><img alt=""><canvas></canvas></div>
-          <div class="layer" id="layerB"><img alt=""><canvas></canvas></div>
-          <div class="handle" id="handle" hidden></div><button class="hbtn" id="handleBtn" aria-label="Move the divider" hidden>◄►</button>
-          <div class="drop" id="drop"><span>◄ Drop here<br>to set A</span><span>Drop here<br>to set B ►</span></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="box vers" aria-label="Versions">
-      <button class="vscroll" data-dir="-1" aria-label="Scroll versions left" hidden>◄</button>
-      <button class="vscroll" data-dir="1" aria-label="Scroll versions right" hidden>►</button>
-      <div class="scroll"><div class="vgrid" id="thumbs"></div></div>
-    </section>
-  </section>
-
-
-</main>
-
-<!-- The parser line. Commands are in app.js (see parse()). -->
-<form class="parser" id="parser" autocomplete="off">
-  <label for="cmd">&gt;</label><input id="cmd" spellcheck="false" aria-label="Type a command, or HELP">
-</form>
-
-<!-- AGI message box: white with a red frame, closed with its X, Esc, Enter or a click outside it. -->
-<div class="msgwrap" id="msgwrap" hidden><div class="box msgbox" id="msgbox" role="dialog" aria-modal="true"></div></div>
-
-<template id="t-about">
-  <p>Made by <a href="https://github.com/gausie" target="_blank" rel="noopener"><svg class="logo inline" viewBox="0 0 16 16" preserveAspectRatio="none" aria-hidden="true"><rect x="5" y="0" width="6" height="1"/><rect x="3" y="1" width="10" height="1"/><rect x="2" y="2" width="12" height="1"/><rect x="1" y="3" width="2" height="1"/><rect x="4" y="3" width="8" height="1"/><rect x="13" y="3" width="2" height="1"/><rect x="1" y="4" width="2" height="1"/><rect x="5" y="4" width="6" height="1"/><rect x="13" y="4" width="2" height="1"/><rect x="0" y="5" width="3" height="1"/><rect x="13" y="5" width="3" height="1"/><rect x="0" y="6" width="3" height="1"/><rect x="13" y="6" width="3" height="1"/><rect x="0" y="7" width="3" height="1"/><rect x="13" y="7" width="3" height="1"/><rect x="0" y="8" width="3" height="1"/><rect x="13" y="8" width="3" height="1"/><rect x="0" y="9" width="4" height="1"/><rect x="12" y="9" width="4" height="1"/><rect x="1" y="10" width="4" height="1"/><rect x="11" y="10" width="4" height="1"/><rect x="1" y="11" width="1" height="1"/><rect x="3" y="11" width="3" height="1"/><rect x="10" y="11" width="5" height="1"/><rect x="2" y="12" width="1" height="1"/><rect x="10" y="12" width="4" height="1"/><rect x="3" y="13" width="3" height="1"/><rect x="10" y="13" width="3" height="1"/><rect x="4" y="14" width="2" height="1"/><rect x="10" y="14" width="2" height="1"/><rect x="5" y="15" width="1" height="1"/><rect x="10" y="15" width="1" height="1"/></svg>gausie</a>.</p>
-  <p>Seventeen scenes from <i>Space Quest I: The Sarien Encounter</i> (Sierra On-Line, 1986), captured the same way in every version of the AGI original and the 1991 SCI remake.</p>
-  <p>Captures are scaled to 1600x1200 with nearest-neighbour pixels, which also corrects 320x200 to 4:3.</p>
-  <p>Inspired by <a href="https://monkeyisland.pages.dev/" target="_blank" rel="noopener">The Secret of Monkey Island: all 13 versions side by side</a> by The Paninos off-line.</p>
-  <p>CRT: <a href="crt.js" target="_blank">crt.js</a> by The Paninos off-line, a WebGL2 port of DOSBox Staging's CRT shaders (crt-hyllian: Hyllian and the DOSBox Staging Team, MIT; vga-1080p: the DOSBox Staging Team, GPL v2+; curvature, corners and vignette from crt-guest-advanced-hd: guest(r) and Dr. Venom, GPL v2+). <a href="licenses/crt-shaders-GPL.txt" target="_blank">All notices</a>. Text font: PxPlus IBM VGA 9x16 by VileR, CC BY-SA 4.0.</p>
-  <p>Free software under the <a href="licenses/GPL-2.0.txt" target="_blank">GNU GPL v2 or later</a>. Fan-made, not affiliated with or endorsed by Sierra, Activision or Microsoft. Screenshots are used for comparison and commentary.</p>
-</template>
-<template id="t-help">
-  <p>Press ESC to use the menu, or type a command and press ENTER:</p>
-  <dl class="keys">
-    <dt>orat, bar, xenon</dt><dd>go to a scene</dd>
-    <dt>vga, amiga, mac</dt><dd>show a version</dd>
-    <dt>compare amiga</dt><dd>split the screen</dd>
-    <dt>zoom 2, crt</dt><dd>display</dd>
-  </dl>
-  <p>Keys: ◄ ► version, ▲ ▼ scene, F2 compare, F3 swap, F4 CRT, F9 copy link. Drag a version onto the screen to compare.</p>
-</template>
-
-<script src="crt.js"></script>
-<script type="module" src="app.js"></script>
+<div id="root"></div>
+<script type="module" src="/src/main.tsx"></script>
 </body>
 </html>

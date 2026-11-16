@@ -1,0 +1,56 @@
+/* A pull-down menu: AGI's frame in black, the item under the pointer or focus inverted. */
+.dropdown {
+  position: fixed;
+  z-index: 40;
+  min-width: calc(var(--ch) * 16);
+  background: var(--e15);
+  color: var(--e0);
+  padding: calc(var(--v) * 4) calc(var(--u) * 4);
+  max-height: calc(100vh - var(--F) * 2);
+  overflow: auto;
+}
+.dropdown::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: calc(var(--v) / 2) var(--u);
+  border: solid var(--e0);
+  border-width: calc(var(--v) / 2) var(--u);
+}
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--ch) * 2);
+  width: 100%;
+  padding: var(--v) var(--ch) 0;
+  white-space: nowrap;
+  height: calc(var(--F) + var(--v));
+}
+.item:hover,
+.item:focus {
+  background: var(--e0);
+  color: var(--e15);
+  outline: none;
+}
+.item[aria-disabled="true"],
+.item[aria-disabled="true"]:hover {
+  background: none;
+  color: var(--e8);
+  cursor: var(--cur-arrow);
+}
+.mark {
+  display: inline-block;
+  width: var(--ch);
+}
+.sep {
+  height: var(--F);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--ch);
+}
+.sep::after {
+  content: "";
+  flex: 1;
+  border-top: var(--v) dotted var(--e8);
+}

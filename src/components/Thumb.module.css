@@ -1,0 +1,41 @@
+/* Same rules as the scene list: a mark in the gutter for what's on screen (→, or A and B when
+   comparing), the label inverted under the pointer or keyboard. The picture never changes. */
+.thumb {
+  display: flex;
+  flex-direction: column;
+}
+.thumb:focus-visible {
+  outline: none;
+}
+.thumb img {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: contain;
+  image-rendering: pixelated;
+  background: var(--e0);
+  display: block;
+}
+/* Label lines touch, so their inversion is one block. */
+.label {
+  position: relative;
+  display: block;
+  margin-top: var(--v);
+  padding-left: calc(var(--ch) * 2);
+  height: var(--F);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.label + .label {
+  margin-top: 0;
+}
+.label[data-mark]::before {
+  content: attr(data-mark);
+  position: absolute;
+  left: 0;
+}
+.thumb:hover .label,
+.thumb:focus-visible .label {
+  background: var(--e0);
+  color: var(--e15);
+}

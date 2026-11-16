@@ -1,0 +1,25 @@
+/* The screen is always 4:3; a picture that isn't (a Mac's square pixels) is letterboxed on black. */
+.layer {
+  position: absolute;
+  inset: 0;
+  background: var(--e0);
+}
+.layer img,
+.layer canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  image-rendering: pixelated;
+  object-fit: contain;
+}
+.layer canvas {
+  display: none;
+}
+/* With CRT on, the canvas replaces the picture (which stays loaded as its source). */
+.crt canvas {
+  display: block;
+}
+.crt img {
+  visibility: hidden;
+}

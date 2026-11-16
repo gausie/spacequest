@@ -1,0 +1,20 @@
+/* A pixel icon one text cell in size, in the text colour: its SVG is a mask over currentColor, so it
+   inverts with a menu title and turns link-blue in a link. Stretched to the cell, like the font. */
+.icon {
+  display: block;
+  flex: none;
+  width: var(--ch);
+  height: var(--F);
+  background: currentColor;
+  mask: center / 100% 100% no-repeat;
+}
+.sierra {
+  mask-image: url("../assets/sierra.svg");
+}
+/* In running text, with a space after it. */
+.github {
+  mask-image: url("../assets/github.svg");
+  display: inline-block;
+  vertical-align: top;
+  margin-right: var(--ch);
+}

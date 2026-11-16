@@ -1,0 +1,60 @@
+/* Viewer sizes the frame in pixels; zoom makes the screen inside bigger and the frame scrolls. */
+.frame {
+  overflow: auto;
+  background: #000;
+  align-self: center;
+  max-width: 100%;
+  flex: none;
+  scrollbar-color: var(--e8) var(--e0);
+}
+.screen {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  cursor: var(--cur-point);
+}
+/* B shows right of the divider. */
+.right {
+  clip-path: inset(0 0 0 var(--split, 50%));
+}
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--split, 50%);
+  width: var(--u);
+  background: var(--e15);
+  transform: translateX(-50%);
+}
+/* The ◄► grip follows the divider but stops at the screen's edges, so it never sticks out. */
+.grip {
+  --w: calc(var(--ch) * 2 + var(--u) * 2);
+  position: absolute;
+  top: 50%;
+  left: clamp(0px, calc(var(--split, 50%) - var(--w) / 2), calc(100% - var(--w)));
+  width: var(--w);
+  height: var(--F);
+  transform: translateY(-50%);
+  background: var(--e15);
+  color: var(--e0);
+  cursor: ew-resize;
+  touch-action: none;
+  text-align: center;
+}
+/* While a version is dragged from the strip: the left half sets A, the right half B. */
+.drop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  pointer-events: none;
+}
+.drop span {
+  display: grid;
+  place-items: center;
+  text-align: center;
+  line-height: 1.2;
+  background: #000000aa;
+  border: var(--u) dashed var(--e15);
+  color: var(--e15);
+}

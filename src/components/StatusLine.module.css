@@ -1,0 +1,37 @@
+/* One white text row across the top, with one pixel row above the text: the 8x8 capitals start
+   on the cell's top row and look clipped against the edge. */
+.statusline {
+  position: relative;
+  z-index: 5;
+  background: var(--e15);
+  color: var(--e0);
+  height: calc(var(--F) + var(--v));
+  white-space: nowrap;
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: calc(var(--ch) * 2);
+  height: calc(var(--F) + var(--v));
+  padding: var(--v) var(--ch) 0;
+}
+.status span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.left {
+  display: flex;
+  gap: var(--ch);
+  min-width: 0;
+}
+.menu .status {
+  display: none;
+}
+@media (max-width: 1100px) {
+  .right {
+    display: none;
+  }
+}

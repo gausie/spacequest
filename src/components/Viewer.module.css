@@ -1,0 +1,25 @@
+/* Scenes | screen, versions underneath. Viewer.tsx measures this box to size the screen. */
+.viewer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  padding: var(--F) calc(var(--ch) * 2);
+  grid-template-columns: calc(var(--ch) * 24) minmax(0, min(1040px, max(600px, (100vh - var(--F) * 15) * 4 / 3)));
+  grid-template-rows: minmax(0, auto) auto;
+  gap: var(--gap) calc(var(--ch) * 2);
+  justify-content: center;
+  align-content: center;
+}
+.screenwin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--F);
+}
+/* Narrow screens: one column and the page scrolls. */
+@media (max-width: 1100px) {
+  .viewer {
+    position: static;
+    padding: var(--F) var(--ch);
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

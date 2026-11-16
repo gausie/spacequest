@@ -1,0 +1,45 @@
+.vers {
+  composes: box from "./Box.module.css";
+  grid-column: 1 / -1;
+  padding: calc(var(--v) * 4) calc(var(--u) * 3 + var(--ch) * 2.5) calc(var(--v) * 3);
+}
+.grid {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: calc(var(--ch) * 15.5);
+  gap: var(--ch);
+}
+/* No scrollbar: ◄ ► cells inside the frame, level with the pictures, when there's more that way. */
+.strip {
+  overflow: auto;
+  scrollbar-width: none;
+}
+.strip::-webkit-scrollbar {
+  display: none;
+}
+/* A cell two characters wide and two rows tall around the glyph, inside the frame (it's 2 pixels
+   in from the edge) so the red line stays whole; the box's side padding keeps the strip clear. */
+.arrow {
+  position: absolute;
+  z-index: 1;
+  top: calc(var(--v) * 4 + var(--ch) * 15.5 * 3 / 8);
+  transform: translateY(-50%);
+  width: calc(var(--ch) * 2);
+  height: calc(var(--F) * 2);
+  display: grid;
+  place-items: center;
+  background: var(--e15);
+  color: var(--e0);
+}
+.arrow:hover,
+.arrow:focus-visible {
+  background: var(--e0);
+  color: var(--e15);
+  outline: none;
+}
+.left {
+  left: calc(var(--u) * 3);
+}
+.right {
+  right: calc(var(--u) * 3);
+}

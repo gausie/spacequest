@@ -1,0 +1,45 @@
+/* AGI's frame: white box, red lines inset one pixel at the sides (two thick) and half a row at the
+   top and bottom, as GfxMgr::drawBox draws it for EGA. Other modules `composes: box` and `scroll`.
+   The base rules are in :where() (no specificity), so a component's own rules always win over them
+   whatever order the stylesheets end up in (hot reloads can reorder them). */
+:where(.box) {
+  position: relative;
+  background: var(--e15);
+  color: var(--e0);
+  padding: calc(var(--v) * 5) calc(var(--u) * 7);
+  min-width: 0;
+  min-height: 0;
+}
+.box::before {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  inset: calc(var(--v) / 2) var(--u);
+  border: solid var(--e4);
+  border-width: calc(var(--v) / 2) var(--u);
+}
+
+/* Square scrollbars in the box's colours: a black bar on white. */
+:where(.scroll) {
+  overflow: auto;
+}
+.scroll::-webkit-scrollbar {
+  width: calc(var(--u) * 3);
+  height: calc(var(--v) * 2);
+  background: var(--e15);
+}
+.scroll::-webkit-scrollbar-thumb {
+  background: var(--e0);
+  border-radius: 0;
+}
+.scroll::-webkit-scrollbar-track {
+  background: var(--e15);
+}
+.scroll::-webkit-scrollbar-corner {
+  background: var(--e15);
+}
+@supports not selector(::-webkit-scrollbar) {
+  .scroll {
+    scrollbar-color: var(--e0) var(--e15);
+  }
+}

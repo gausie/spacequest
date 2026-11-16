@@ -1,0 +1,116 @@
+/* The AGI interpreter's own look, in its 16 colours and the PC BIOS 8x8 font. Sizes are in AGI
+   pixels on a 4:3 screen: --u wide, --v tall. What's here is shared by everything; each
+   component's own styles are in its .module.css. */
+@font-face {
+  font-family: "AGI PC 8x8";
+  src: url(./assets/agi-pc-8x8.ttf) format("truetype");
+  font-display: block;
+}
+@font-face {
+  font-family: "IBM VGA 9x16";
+  src: url(./assets/ibm-vga-9x16.ttf) format("truetype");
+  font-display: block;
+}
+:root {
+  --e0: #000000;
+  --e1: #0000aa;
+  --e2: #00aa00;
+  --e3: #00aaaa;
+  --e4: #aa0000;
+  --e7: #aaaaaa;
+  --e8: #555555;
+  --e10: #55ff55;
+  --e11: #55ffff;
+  --e12: #ff5555;
+  --e14: #ffff55;
+  --e15: #ffffff;
+  --vt: "AGI PC 8x8", "Courier New", monospace;
+  /* One text cell is 8x8 AGI pixels; font-size is its height. */
+  --F: 24px;
+  --v: calc(var(--F) / 8);
+  --u: calc(var(--F) / 9.6);
+  --ch: calc(var(--u) * 8);
+  --gap: var(--F);
+  /* A Sierra-style pixel arrow for every pointer (a sharper copy for high-density screens). */
+  --cur-arrow: image-set(url("./assets/cursor.png") 1x, url("./assets/cursor@2x.png") 2x) 1 1, default;
+  --cur-point: image-set(url("./assets/cursor.png") 1x, url("./assets/cursor@2x.png") 2x) 1 1, pointer;
+  color-scheme: dark;
+}
+/* Reading text is in the PC's VGA text font (9x16, stretched for 4:3 so a cell is 1.35 em tall),
+   the same family as AGI's 8x8 but finer; one of its cells fills one of our text rows. Display >
+   Use AGI font drops the .vga class and everything is in the 8x8. */
+body.vga {
+  --vt: "IBM VGA 9x16", "Courier New", monospace;
+  font-size: calc(var(--F) / 1.35);
+  line-height: 1.35;
+}
+@media (max-height: 860px), (max-width: 1300px) {
+  :root {
+    --F: 20px;
+  }
+}
+@media (max-width: 700px) {
+  :root {
+    --F: 16px;
+  }
+}
+* {
+  box-sizing: border-box;
+}
+html,
+body,
+#root {
+  margin: 0;
+  height: 100%;
+}
+body {
+  overflow: hidden;
+  font: 400 var(--F) / 1 var(--vt);
+  color: var(--e15);
+  background: var(--e0);
+  -webkit-font-smoothing: none;
+}
+/* Status line, the viewer, the parser line. */
+#root {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+html,
+body {
+  cursor: var(--cur-arrow);
+}
+button,
+a {
+  cursor: var(--cur-point);
+}
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  text-align: inherit;
+  border-radius: 0;
+}
+:focus-visible {
+  outline: var(--u) dotted currentColor;
+  outline-offset: 1px;
+}
+a {
+  color: var(--e1);
+}
+p {
+  margin: 0 0 var(--F);
+}
+
+@media (max-width: 1100px) {
+  body {
+    overflow: auto;
+  }
+  #root {
+    height: auto;
+    min-height: 100%;
+  }
+}

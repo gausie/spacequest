@@ -1,0 +1,12 @@
+.keys {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0 var(--ch);
+  margin: 0 0 var(--F);
+}
+.keys dt {
+  color: var(--e4);
+}
+.keys dd {
+  margin: 0;
+}

@@ -1,0 +1,10 @@
+.desk {
+  position: relative;
+  min-height: 0;
+  overflow: hidden;
+}
+@media (max-width: 1100px) {
+  .desk {
+    overflow: visible;
+  }
+}

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Recapture every scene of every version from scenes.json and publish them to shots/.
+# Recapture every scene of every version from scenes.json and publish them to public/shots/.
 #
 #   tools/capture/capture_all.sh [version ...]
 #
@@ -37,7 +37,7 @@ done
 
 grep -h "NO SCREENSHOT" "$OUT"/run-*.log || true
 
-# Trim the interface, centre the playfield, scale to 1600x1200 into shots/.
+# Trim the interface, centre the playfield, scale to 1600x1200 into public/shots/.
 rm -rf "$OUT/final"
 docker compose run --rm -T --entrypoint python3 capture /work/postprocess.py /out/raw /out/final
 for d in "$OUT"/final/*/; do
@@ -47,4 +47,4 @@ for d in "$OUT"/final/*/; do
     (cd "$ROOT" && ./process.sh "$f" "$v" "$(basename "$f" .png)" > /dev/null)
   done
 done
-echo "done: $(ls "$ROOT"/shots/*/*.png | wc -l) screenshots in shots/"
+echo "done: $(ls "$ROOT"/public/shots/*/*.png | wc -l) screenshots in public/shots/"

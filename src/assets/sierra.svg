@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 8 8" preserveAspectRatio="none" shape-rendering="crispEdges">
+<title>Sierra</title>
+<!-- Character 1 of SCI's system font (FONT.000): the Sierra mountain. Dark on light, light on dark (as a favicon); as a CSS mask only its shape counts. -->
+<style>path{fill:#000}@media (prefers-color-scheme:dark){path{fill:#fff}}</style>
+<path d="M2 0h4v1h-4zM1 1h6v1h-6zM0 2h3v1h-3zM5 2h3v1h-3zM0 3h3v1h-3zM6 3h2v1h-2zM0 4h2v1h-2zM4 4h1v1h-1zM7 4h1v1h-1zM0 5h1v1h-1zM5 5h1v1h-1zM7 5h1v1h-1zM5 6h1v1h-1z"/>
+</svg>

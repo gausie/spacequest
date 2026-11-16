@@ -1,0 +1,71 @@
+/* Over everything, centred like AGI's print(). */
+.wrap {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: var(--F);
+}
+/* Sized to its text up to 36 characters, as AGI wraps a message; focused only so Enter closes it.
+   The X sits in the top-right corner inside the frame; the text keeps clear of that column, and a
+   scrollbar, when there is one, runs down it under the X. */
+.box {
+  composes: box from "./Box.module.css";
+  width: fit-content;
+  max-width: min(calc(var(--ch) * 37.5 + var(--u) * 14), 100%);
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  outline: none;
+}
+.body {
+  composes: scroll from "./Box.module.css";
+  min-height: 0;
+}
+.body > :last-child {
+  margin-bottom: 0;
+}
+.fits {
+  overflow: hidden;
+}
+.close {
+  position: absolute;
+  top: calc(var(--v) * 2);
+  right: calc(var(--u) * 3);
+  width: calc(var(--ch) * 1.5);
+  height: var(--F);
+  display: grid;
+  place-items: center;
+}
+.close:hover,
+.close:focus-visible {
+  background: var(--e0);
+  color: var(--e15);
+  outline: none;
+}
+/* A picture: as wide as it needs (ZoomView sizes it), never scrolled. */
+.wide {
+  max-width: none;
+}
+.wide .body {
+  overflow: hidden;
+}
+/* With an X: the box's right padding becomes the X's column. */
+.closable {
+  padding-right: calc(var(--u) * 3);
+}
+.closable .body {
+  padding-right: calc(var(--ch) * 1.5 + var(--u) * 4);
+}
+/* A short reply (no X) never scrolls: some browsers show a bar for a pixel or two of overflow,
+   which then narrows the text so it wraps and really does overflow. */
+.box:not(.closable) .body {
+  overflow: hidden;
+}
+/* When the text scrolls, the scroll area (and so its bar) starts below the X: the X ends at
+   F + 2v from the top and the box's padding is 5v, so this leaves 3v clear under it in either
+   font. (Safari ignores a margin on the scrollbar track, so it's the area itself that moves.) */
+.closable .body:not(.fits) {
+  margin-top: var(--F);
+}

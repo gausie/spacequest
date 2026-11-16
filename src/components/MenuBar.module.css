@@ -1,0 +1,17 @@
+/* Only shown while the status line is in menu mode (StatusLine passes `shown`). */
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: var(--ch);
+  height: calc(var(--F) + var(--v));
+  padding: var(--v) var(--ch) 0;
+}
+/* The open title is inverted over its own text only, one space between titles, as in AGI. */
+.title {
+  padding: var(--v) 0 0;
+  margin: calc(-1 * var(--v)) 0 0;
+}
+.title[aria-expanded="true"] {
+  background: var(--e0);
+  color: var(--e15);
+}
