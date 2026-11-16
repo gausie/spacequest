@@ -349,8 +349,9 @@ def sci_objects(g):
 
 def read_state(g):
     if g.v["engine"] == "agi": return agi_state(g)
-    # y <= 0 puts the whole sprite above the picture (Roger parked at 0,0 in rooms he isn't in).
-    return {k: v for k, (_, v, visible) in sci_objects(g).items() if visible and v[4] > 0}
+    # y <= 0 puts the whole sprite above the picture (Roger parked at 0,0 in rooms he isn't in);
+    # y >= 1000 is where staging parks actors a scene leaves out (send can't take negatives).
+    return {k: v for k, (_, v, visible) in sci_objects(g).items() if visible and 0 < v[4] < 1000}
 
 
 def sci_apply(state, objs):
@@ -358,7 +359,9 @@ def sci_apply(state, objs):
     no script, then set the properties directly."""
     cmds = []
     for k, (a, _, visible) in objs.items():
-        if visible and k not in state: cmds += [f"send {a} setScript 0", f"send {a} setCycle 0", f"send {a} hide"]
+        # Some actors are shown again every frame (Roger), so move them below the picture too.
+        # Roger is parked even while hidden: a room can show him again once the game resumes.
+        if k not in state and (visible or k in ("ego#0", "egoHead#0")): cmds += [f"send {a} setScript 0", f"send {a} setCycle 0", f"send {a} hide", f"send {a} y 1000", f"send {a} startUpd"]
     for k, (view, loop, cel, x, y, z) in state.items():
         if k not in objs: continue  # the version doesn't have it (staged_shot says so)
         a = objs[k][0]

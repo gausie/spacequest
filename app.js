@@ -67,12 +67,19 @@ function renderThumbs() {
   }));
 }
 
-function renderInfo() {
-  const show = v => `<h2>${v.engine} · ${v.name}</h2>
-    <dl><dt>Year</dt><dd>${v.year}</dd><dt>Engine</dt><dd>${v.engine}</dd><dt>Native</dt><dd>${v.native.join("x")}</dd></dl>
-    <p>${v.about}</p>${v.approx ? `<p class="approx">⚠ ${v.approx}</p>` : ""}`;
-  const A = VERSIONS[state.a], B = VERSIONS[state.b];
-  $("#info").innerHTML = show(A) + (state.compare ? `<div class="ab">${show(B)}</div>` : "");
+// The screen at 1x is as big as the window allows: its column's width, or less when the
+// height runs out (the grid squeezes the frame, which then overflows by that much). Zoom
+// keeps the frame that size and scrolls a bigger screen inside it.
+function fitScreen() {
+  const f = $("#frame"), sc = $("#screen"), win = f.parentElement, cs = getComputedStyle(win);
+  if (!win.clientWidth) return;  // viewer hidden; measured again when it's shown
+  const w0 = Math.floor(win.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+  f.style.width = sc.style.width = `${w0}px`; f.style.height = "";
+  const over = f.scrollHeight - f.clientHeight;
+  // A multiple of 4 so the height is a whole number too: a half pixel brings back scrollbars.
+  const w = Math.floor((over > 0 ? (sc.offsetHeight - over) * 4 / 3 : w0) / 4) * 4;
+  f.style.width = `${w}px`; f.style.height = `${w * 3 / 4}px`;
+  sc.style.width = `${w * state.zoom}px`;
 }
 
 function renderWall() {
@@ -94,7 +101,7 @@ function update() {
   document.querySelectorAll(".menu-btn").forEach(b => b.setAttribute("aria-pressed", b.dataset.view === state.view));
   document.body.classList.toggle("crt", state.crt && crtOK);
   document.body.classList.toggle("compare", state.compare);
-  $("#screen").style.width = `${state.zoom * 100}%`;
+  fitScreen();
   $("#screen").style.setProperty("--split", `${state.split}%`);
   $("#handle").hidden = !state.compare;
   $("#bSwap").hidden = !state.compare;
@@ -104,11 +111,11 @@ function update() {
   document.querySelectorAll("[data-zoom]").forEach(b => b.setAttribute("aria-pressed", +b.dataset.zoom === state.zoom));
   $("#caption").textContent = state.compare
     ? `${s.name} · A: ${A.engine} ${A.name} │ B: ${B.engine} ${B.name}`
-    : `${s.name} · ${A.engine} ${A.name}, ${A.year}`;
+    : `${s.name} · ${A.engine} ${A.name}, ${A.year} · ${A.native.join("×")}${A.approx ? ` · ⚠ ${A.approx}` : ""}`;
   if (state.view === "viewer") {
     loadLayer(layers[0], state.a);
     if (state.compare) loadLayer(layers[1], state.b);
-    renderScenes(); renderThumbs(); renderInfo();
+    renderScenes(); renderThumbs();
     document.querySelector(".thumb.a")?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }
   if (state.view === "wall") renderWall();
@@ -204,7 +211,7 @@ document.addEventListener("keydown", e => {
 });
 
 let resizeTimer;
-window.addEventListener("resize", () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawCRT, 100); });
+window.addEventListener("resize", () => { fitScreen(); clearTimeout(resizeTimer); resizeTimer = setTimeout(redrawCRT, 100); });
 
 installCursor();
 initWindows();

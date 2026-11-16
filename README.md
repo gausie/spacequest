@@ -1,4 +1,4 @@
-# Space Quest I, side by side
+# Space Quest I versions
 
 Twelve moments from Space Quest I, framed identically across every release. Static site, no build step.
 
